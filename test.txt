@@ -1,0 +1,16 @@
+int globalVar = 124;
+int global;
+
+function resta ( int x, int y ) { 
+    5 + 5 + x + y;
+    int test = 1 + 2;
+    return 5 - 5;
+}
+
+function sumar () { 
+    return x + y;
+}
+
+void main ( ) {
+ 5 + 5;
+}
