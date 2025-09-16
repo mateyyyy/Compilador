@@ -65,16 +65,18 @@ parser code {:
 
 terminal           SEMI, PLUS, MINUS, TIMES, DIVIDE, LPAREN, RPAREN;
 terminal           RKEY, LKEY, FUNCTION, VOID, MAIN, COMA, RETURN, EQUAL;
-terminal           INT, FLOAT, BOOLEAN, STRING, IF, ELSE, WHILE, FOR;
+terminal           INT,  FLOAT, BOOLEAN, STRING, IF, ELSE, FOR, WHILE, GREATER, LESS;
+
+terminal Integer NUMBER;
+terminal String ID;
 
    
 
-non terminal     expr_list, expr_part, func, void_decl, main, program, declaracion;
-non terminal     params, func_list, expr_dcl_list, tipo, global_var;
-
 non terminal Object expr;
-terminal Integer NUMBER;
-terminal String ID;
+non terminal expr_part, func, void_decl, main, program, declaracion, func_section, main_block;
+non terminal params, func_list, expr_dcl_list, statement, if_statement, comparison_expr, condicion;
+
+
    
 
 /* -------------Precedence and Associatively of Terminals Section----------- */
@@ -111,39 +113,22 @@ terminal String ID;
                  | ID     
 */
    
+   main ::= func_section main_block ;
 
-   main ::= func_list VOID MAIN LPAREN params RPAREN LKEY program RKEY
-            {: tabla.MostrarTabla(); :}
-            | VOID MAIN LPAREN params RPAREN LKEY program RKEY
-            {: tabla.MostrarTabla(); :}
-            ;
+   func_section ::= func_list
+                  | /* empty */ ;
 
-   global_var ::= tipo ID SEMI
-                  {: /*agregar a lista de  variables globales*/ :}
-                  |
-                  tipo ID EQUAL expr SEMI
-                  {: /*agregar a lista de  variables globales*/ :}
-                  |
-                  /* empty */ 
-                  {: /* no hay variables globales */ :}
-                  ;
-
-   tipo ::= INT | FLOAT | BOOLEAN | STRING ;
+   main_block ::= VOID MAIN LPAREN params RPAREN LKEY program RKEY
+                  {: tabla.MostrarTabla(); :} ;
 
    func_list ::=   func_list func 
                   | func_list void_decl
-                  | void_decl
                   | func
-                  |
                   ;
 
    func ::=   FUNCTION ID LPAREN params RPAREN LKEY program RETURN expr SEMI RKEY 
                {: tabla.cleanTablaFunc(); :}
                ;
-
-   void_decl ::=  VOID ID LPAREN params RPAREN LKEY program RKEY
-                  {: tabla.cleanTablaFunc(); :}
-                  ;
 
    program ::= expr_dcl_list
                | /* empty */ 
@@ -153,9 +138,8 @@ terminal String ID;
                {: tabla.AgregarFunc(id); :}
                 | INT ID:id
                 {: tabla.AgregarFunc(id); :}
-                | /* sin parametro */
+                | /* empty */
                 ;
-
 
    declaracion ::= INT ID:id SEMI
                   {: tabla.Agregar(id); :} 
@@ -164,22 +148,25 @@ terminal String ID;
                   {: tabla.Agregar(id); :} 
                   ;
 
-   
+   statement ::= if_statement;
 
-   expr_dcl_list ::= expr_dcl_list expr_part
-                  | expr_dcl_list declaracion
-                  | expr_part
-                  | declaracion
+   if_statement ::= IF LPAREN condicion RPAREN LKEY program RKEY;
+
+   condicion ::= expr comparison_expr expr;
+
+   comparison_expr ::= GREATER
+                  | LESS
+                  | EQUAL
                   ;
 
-   expr_list ::= expr_list expr_part
-                 |
-                 expr_part;
+   expr_dcl_list ::= expr_dcl_list expr_part
+                | expr_dcl_list declaracion
+                | expr_dcl_list statement
+                | expr_part
+                | declaracion
+                | statement ;
    
-   expr_part ::= expr
-                 SEMI
-                 
-                 ;
+   expr_part ::= expr SEMI;
    
    expr      ::= expr PLUS expr
                  |

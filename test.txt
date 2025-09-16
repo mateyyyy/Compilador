@@ -1,13 +1,13 @@
-int globalVar = 124;
-int global;
-
 function resta ( int x, int y ) { 
     5 + 5 + x + y;
     int test = 1 + 2;
+    if ( 5 + 5 = x ){ 
+	int c = 5;
+     }
     return 5 - 5;
 }
 
-function sumar () { 
+function sumar (int x, int y) { 
     return x + y;
 }
 

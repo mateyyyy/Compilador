@@ -113,13 +113,12 @@ dec_int_id = [A-Za-z_][A-Za-z_0-9]*
     "else"             { System.out.print(" else "); return symbol(sym.ELSE); }
     "while"            { System.out.print(" while "); return symbol(sym.WHILE); }
     "for"              { System.out.print(" for "); return symbol(sym.FOR); }
-
-   
+    ">"                { System.out.print(" > "); return symbol(sym.GREATER); }
+    "<"                { System.out.print(" < "); return symbol(sym.LESS); }
     {dec_int_lit}      { System.out.print(yytext());
                          return symbol(sym.NUMBER, Integer.valueOf(yytext())); }
     {dec_int_id}       { System.out.print(yytext());
                          return symbol(sym.ID, yytext()); }
-   
     {WhiteSpace}       { /* just skip what was found, do nothing */ }
 }
 
