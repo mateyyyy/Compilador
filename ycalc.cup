@@ -97,22 +97,6 @@ non terminal params, func_list, expr_dcl_list, statement, if_statement, comparis
 
 /* ----------------------------Grammar Section-------------------- */
    
-/* The grammar for our parser.
-   
-   expr_list ::=   expr_list expr_part
-                 | expr_part
-   expr_part ::=   expr SEMI
-   expr      ::=   expr PLUS factor
-                 | expr MINUS factor
-                 | factor
-   factor    ::=   factor TIMES term
-                 | factor DIVIDE term
-                 | term
-   term     ::=    LPAREN expr RPAREN
-                 | NUMBER
-                 | ID     
-*/
-   
    main ::= func_section main_block ;
 
    func_section ::= func_list
@@ -142,10 +126,10 @@ non terminal params, func_list, expr_dcl_list, statement, if_statement, comparis
                 ;
 
    declaracion ::= INT ID:id SEMI
-                  {: tabla.Agregar(id); :} 
+                  {: tabla.Agregar(id); :}
                   |
                   INT ID:id EQUAL expr SEMI
-                  {: tabla.Agregar(id); :} 
+                  {: tabla.Agregar(id); :}
                   ;
 
    statement ::= if_statement;

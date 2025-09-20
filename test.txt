@@ -1,13 +1,13 @@
-function resta ( int x, int y ) { 
+function resta ( int y, int x ){ 
     5 + 5 + x + y;
     int test = 1 + 2;
     if ( 5 + 5 = x ){ 
-	int c = 5;
+	int x = 5;
      }
     return 5 - 5;
 }
 
-function sumar (int x, int y) { 
+function sumar (int y) { 
     return x + y;
 }
 
