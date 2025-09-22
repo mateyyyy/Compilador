@@ -1,41 +1,39 @@
 import java.util.ArrayList;
 
 public class TablaSimbolos {
-    ArrayList<String> Tabla = new ArrayList<>();
-    ArrayList<String> TablaFunc = new ArrayList<>(); // Esta lista la voy a usar para agregar las variables declaradas
-                                                     // en los parametros
+    private ArrayList<ListElement> Tabla = new ArrayList<>();
 
     public TablaSimbolos() {
     }
 
-    public void Agregar(String symbol) {
-        Tabla.add(symbol);
+    public void Agregar(String symbol, String type) {
+        if (buscar(symbol) != null) {
+            Tabla.add(new ListElement(symbol, type));
+        } else {
+            System.out.println("Variable ya declarada");
+        }
     }
 
-    public void AgregarFunc(String symbol) { // Agrega el simbolo a la tabla de funciones TablaFunc
-        TablaFunc.add(symbol);
+    public void Agregar(String symbol, String type, String value) {
+        if (buscar(symbol) != null) {
+            Tabla.add(new ListElement(symbol, type, value));
+        } else {
+            System.out.println("Variable ya declarada");
+        }
     }
 
-    public void cleanTablaFunc() {
-        TablaFunc.removeAll(TablaFunc);
-    }
-
-    public boolean buscar(String target) {
-        for (String s : Tabla) {
-            if (s.equals(target)) {
-                return true;
+    public ListElement buscar(String target) {
+        for (ListElement sym : Tabla) {
+            if (sym.getId().equals(target)) {
+                return sym;
             }
         }
-        return false;
+        return null;
     }
 
     public void MostrarTabla() {
-        for (String s : Tabla) {
-            System.out.println(s);
+        for (ListElement s : Tabla) {
+            System.out.println(s.getId() + " : " + s.getValue());
         }
-    }
-
-    public boolean Existe(String target) {
-        return Tabla.contains(target) || TablaFunc.contains(target);
     }
 }

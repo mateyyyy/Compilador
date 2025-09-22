@@ -100,20 +100,20 @@ dec_int_id = [A-Za-z_][A-Za-z_0-9]*
     ")"                { System.out.print(" ) "); return symbol(sym.RPAREN); }
     "void"             { System.out.print(" void "); return symbol(sym.VOID); }
     "main"             { System.out.print(" main "); return symbol(sym.MAIN); }
-    "function"         { System.out.print(" function "); return symbol(sym.FUNCTION); }
+/*  "function"         { System.out.print(" function "); return symbol(sym.FUNCTION); }*/
     "{"                { System.out.print(" { "); return symbol(sym.LKEY); }
     "}"                { System.out.print(" } "); return symbol(sym.RKEY); }
     "int"              { System.out.print(" int "); return symbol(sym.INT); }
     ","                { System.out.print(" , "); return symbol(sym.COMA); }
-    "return"           { System.out.print(" return "); return symbol(sym.RETURN); }
+/*  "return"           { System.out.print(" return "); return symbol(sym.RETURN); } */
     "="                { System.out.print(" = "); return symbol(sym.EQUAL); }
     "float"            { System.out.print(" float "); return symbol(sym.FLOAT); }
     "String"           { System.out.print(" String "); return symbol(sym.STRING); }
     "boolean"          { System.out.print(" boolean "); return symbol(sym.BOOLEAN); }
     "if"               { System.out.print(" if "); return symbol(sym.IF); }
-    "else"             { System.out.print(" else "); return symbol(sym.ELSE); }
-    "while"            { System.out.print(" while "); return symbol(sym.WHILE); }
-    "for"              { System.out.print(" for "); return symbol(sym.FOR); }
+/*  "else"             { System.out.print(" else "); return symbol(sym.ELSE); } */
+/*  "while"            { System.out.print(" while "); return symbol(sym.WHILE); } */
+/*  "for"              { System.out.print(" for "); return symbol(sym.FOR); } */
     ">"                { System.out.print(" > "); return symbol(sym.GREATER); }
     "<"                { System.out.print(" < "); return symbol(sym.LESS); }
     {dec_int_lit}      { System.out.print(yytext());

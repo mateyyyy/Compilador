@@ -10,6 +10,7 @@ import java_cup.runtime.*;
 
 parser code {:
     TablaSimbolos tabla = new TablaSimbolos();
+    Node RaizNode;
     public void report_error(String message, Object info) {
    
         /* Create a StringBuffer called 'm' with the string 'Error' in it. */
@@ -64,17 +65,17 @@ parser code {:
    
 
 terminal           SEMI, PLUS, MINUS, TIMES, DIVIDE, LPAREN, RPAREN;
-terminal           RKEY, LKEY, FUNCTION, VOID, MAIN, COMA, RETURN, EQUAL;
-terminal           INT,  FLOAT, BOOLEAN, STRING, IF, ELSE, FOR, WHILE, GREATER, LESS;
+terminal           RKEY, LKEY, VOID, MAIN, COMA, EQUAL;
+terminal           INT,  FLOAT, BOOLEAN, STRING, IF, GREATER, LESS;
 
 terminal Integer NUMBER;
-terminal String ID;
+terminal String ID;   
 
-   
-
-non terminal Object expr;
-non terminal expr_part, func, void_decl, main, program, declaracion, func_section, main_block;
-non terminal params, func_list, expr_dcl_list, statement, if_statement, comparison_expr, condicion;
+non terminal String tipo;
+non terminal Node expr, expr_part;
+non terminal Node func_section, main_block, func_list, program, expr_dcl_list, declaracion;
+non terminal func, void_decl, main;
+non terminal params, statement, if_statement, comparison_expr, condicion;
 
 
    
@@ -97,76 +98,79 @@ non terminal params, func_list, expr_dcl_list, statement, if_statement, comparis
 
 /* ----------------------------Grammar Section-------------------- */
    
-   main ::= func_section main_block ;
+   main ::= main_block:mb
+          {: RaizNode = new Node(null, null, mb, "root");
+             System.out.println("Arbol");
+             RaizNode.recorrer(tabla);
+             RaizNode.getType();
+          :}
+        ;
 
-   func_section ::= func_list
-                  | /* empty */ ;
+main_block ::= VOID MAIN LPAREN params RPAREN LKEY program:pg RKEY
+                {: RESULT = pg; :}
+              ;
 
-   main_block ::= VOID MAIN LPAREN params RPAREN LKEY program RKEY
-                  {: tabla.MostrarTabla(); :} ;
+program ::= expr_dcl_list:edl
+             {: RESULT = edl; :}
+           | /* empty */
+           ;
 
-   func_list ::=   func_list func 
-                  | func_list void_decl
-                  | func
-                  ;
+params ::= INT ID:id COMA params
+          | INT ID:id
+          | /* empty */
+          ;
 
-   func ::=   FUNCTION ID LPAREN params RPAREN LKEY program RETURN expr SEMI RKEY 
-               {: tabla.cleanTablaFunc(); :}
+declaracion ::= tipo:tp ID:id SEMI
+                 {: RESULT = new Node(id, "Leaf", tp ); :}
+               | tipo:tp ID:id EQUAL expr:ex SEMI
+                 {: RESULT = new Node("=", new Node(id, "Leaf",  tp), ex, "Declaration" ); :}
                ;
 
-   program ::= expr_dcl_list
-               | /* empty */ 
-               ;
+tipo ::= INT {: RESULT = "int"; :}
+        | FLOAT {: RESULT = "float"; :} 
+        | STRING {: RESULT = "string"; :} 
+        | BOOLEAN {: RESULT = "boolean"; :}
+        ;
 
-   params ::= INT ID:id COMA params
-               {: tabla.AgregarFunc(id); :}
-                | INT ID:id
-                {: tabla.AgregarFunc(id); :}
-                | /* empty */
-                ;
+statement ::= if_statement;
 
-   declaracion ::= INT ID:id SEMI
-                  {: tabla.Agregar(id); :}
-                  |
-                  INT ID:id EQUAL expr SEMI
-                  {: tabla.Agregar(id); :}
-                  ;
+if_statement ::= IF LPAREN condicion RPAREN LKEY program RKEY;
 
-   statement ::= if_statement;
+condicion ::= expr comparison_expr expr;
 
-   if_statement ::= IF LPAREN condicion RPAREN LKEY program RKEY;
-
-   condicion ::= expr comparison_expr expr;
-
-   comparison_expr ::= GREATER
+comparison_expr ::= GREATER
                   | LESS
                   | EQUAL
                   ;
 
-   expr_dcl_list ::= expr_dcl_list expr_part
-                | expr_dcl_list declaracion
-                | expr_dcl_list statement
-                | expr_part
-                | declaracion
-                | statement ;
-   
-   expr_part ::= expr SEMI;
-   
-   expr      ::= expr PLUS expr
-                 |
-                 expr MINUS expr
-                 |
-                 expr TIMES expr
-                 |
-                 expr DIVIDE expr
-                 |
-                 LPAREN expr RPAREN
-                 |
-                 NUMBER
-                 | 
-                 ID:id
-                 {:  if(!tabla.Existe(id)){
-                     System.err.println("Error: variable '" + id + "' no declarada.");
-                 }
-                   :}
+expr_dcl_list ::= expr_dcl_list:edl expr_part:ep
+                   {: RESULT = new Node(null, edl, ep, "expr"); :}
+                 | expr_dcl_list:edl declaracion:dcl
+                   {: RESULT = new Node(null, edl, dcl, "expr"); :}
+                 | expr_dcl_list statement
+                 | expr_part:ep
+                   {: RESULT = ep; :}
+                 | declaracion:dcl
+                 {: RESULT = dcl; :}
+                 | statement
                  ;
+
+expr_part ::= expr:ex SEMI
+               {: RESULT = ex; :}
+             ;
+
+expr ::= expr:ex0 PLUS expr:ex1
+           {: RESULT = new Node("+", ex0, ex1, "Operation"); :}
+       | expr:ex0 MINUS expr:ex1
+           {: RESULT = new Node("-", ex0, ex1, "Operation"); :}
+       | expr:ex0 TIMES expr:ex1
+           {: RESULT = new Node("*", ex0, ex1, "Operation"); :}
+       | expr:ex0 DIVIDE expr:ex1
+           {: RESULT = new Node("/", ex0, ex1, "Operation"); :}
+       | LPAREN expr:ex RPAREN
+           {: RESULT = ex; :}
+       | NUMBER:number
+           {: RESULT = new Node(number.toString(), "Leaf", "int"); :}
+       | ID:id
+           {: RESULT = new Node(id, "Leaf", "int"); :}
+       ;
