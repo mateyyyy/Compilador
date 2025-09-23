@@ -41,7 +41,7 @@ public class Node {
                         System.out.println("Los tipos coinciden");
                     }
                     else{
-                        throw new RuntimeException("Los tipos de las variables: " + left.op + " y " + right.op + " no coinciden");
+                        throw new RuntimeException("Los tipos de : " + left.op + " y " + right.op + " no coinciden");
                     }
                 }
                 else{
@@ -56,6 +56,8 @@ public class Node {
                     if(var!=null){
                         this.type = var.getType();
                         return type;
+                    }else{
+                        throw new RuntimeException("Variable " + op + " no declarada");
                     }
                 }
                 return this.type;

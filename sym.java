@@ -6,6 +6,7 @@
 /** CUP generated class containing symbol constants. */
 public class sym {
   /* terminals */
+  public static final int BOOLEAN_LIT = 25;
   public static final int TIMES = 5;
   public static final int PLUS = 3;
   public static final int RPAREN = 8;
@@ -56,7 +57,8 @@ public class sym {
   "LESS",
   "NUMBER",
   "ID",
-  "FLOATNUM"
+  "FLOATNUM",
+  "BOOLEAN_LIT"
   };
 }
 

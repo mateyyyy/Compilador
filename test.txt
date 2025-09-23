@@ -1,5 +1,4 @@
-void main ( ) {
- int x;
+void main () {
  float y = 5.9;
  5.0 + x;
 }

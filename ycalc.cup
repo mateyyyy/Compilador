@@ -1,179 +1,186 @@
-/*
-  File Name: ycalc.cup
-  To Create: > java java_cup.Main < ycalc.cup
-*/
-   
-   
-/* ----------------------Preliminary Declarations Section--------------------*/
-   
-import java_cup.runtime.*;
+  /*
+    File Name: ycalc.cup
+    To Create: > java java_cup.Main < ycalc.cup
+  */
+    
+    
+  /* ----------------------Preliminary Declarations Section--------------------*/
+    
+  import java_cup.runtime.*;
 
-parser code {:
-    TablaSimbolos tabla = new TablaSimbolos();
-    Node RaizNode;
-    public void report_error(String message, Object info) {
-   
-        /* Create a StringBuffer called 'm' with the string 'Error' in it. */
-        StringBuffer m = new StringBuffer("Error");
-   
-        /* Check if the information passed to the method is the same
-           type as the type java_cup.runtime.Symbol. */
-        if (info instanceof java_cup.runtime.Symbol) {
-            /* Declare a java_cup.runtime.Symbol object 's' with the
-               information in the object info that is being typecasted
-               as a java_cup.runtime.Symbol object. */
-            java_cup.runtime.Symbol s = ((java_cup.runtime.Symbol) info);
-   
-            /* Check if the line number in the input is greater or
-               equal to zero. */
-            if (s.left >= 0) {                
-                /* Add to the end of the StringBuffer error message
-                   the line number of the error in the input. */
-                m.append(" in line "+(s.left+1));   
-                /* Check if the column number in the input is greater
-                   or equal to zero. */
-                if (s.right >= 0)                    
-                    /* Add to the end of the StringBuffer error message
-                       the column number of the error in the input. */
-                    m.append(", column "+(s.right+1));
-            }
-        }
-   
-        /* Add to the end of the StringBuffer error message created in
-           this method the message that was passed into this method. */
-        m.append(" : "+message);
-   
-        /* Print the contents of the StringBuffer 'm', which contains
-           an error message, out on a line. */
-        System.err.println(m);
-    }
-   
-    /* Change the method report_fatal_error so when it reports a fatal
-       error it will display the line and column number of where the
-       fatal error occurred in the input as well as the reason for the
-       fatal error which is passed into the method in the object
-       'message' and then exit.*/
-    public void report_fatal_error(String message, Object info) {
-        report_error(message, info);
-        System.exit(1);
-    }
-:};
-   
+  parser code {:
+      TablaSimbolos tabla = new TablaSimbolos();
+      Node RaizNode;
+      public void report_error(String message, Object info) {
+    
+          /* Create a StringBuffer called 'm' with the string 'Error' in it. */
+          StringBuffer m = new StringBuffer("Error");
+    
+          /* Check if the information passed to the method is the same
+            type as the type java_cup.runtime.Symbol. */
+          if (info instanceof java_cup.runtime.Symbol) {
+              /* Declare a java_cup.runtime.Symbol object 's' with the
+                information in the object info that is being typecasted
+                as a java_cup.runtime.Symbol object. */
+              java_cup.runtime.Symbol s = ((java_cup.runtime.Symbol) info);
+    
+              /* Check if the line number in the input is greater or
+                equal to zero. */
+              if (s.left >= 0) {                
+                  /* Add to the end of the StringBuffer error message
+                    the line number of the error in the input. */
+                  m.append(" in line "+(s.left+1));   
+                  /* Check if the column number in the input is greater
+                    or equal to zero. */
+                  if (s.right >= 0)                    
+                      /* Add to the end of the StringBuffer error message
+                        the column number of the error in the input. */
+                      m.append(", column "+(s.right+1));
+              }
+          }
+    
+          /* Add to the end of the StringBuffer error message created in
+            this method the message that was passed into this method. */
+          m.append(" : "+message);
+    
+          /* Print the contents of the StringBuffer 'm', which contains
+            an error message, out on a line. */
+          System.err.println(m);
+      }
+    
+      /* Change the method report_fatal_error so when it reports a fatal
+        error it will display the line and column number of where the
+        fatal error occurred in the input as well as the reason for the
+        fatal error which is passed into the method in the object
+        'message' and then exit.*/
+      public void report_fatal_error(String message, Object info) {
+          report_error(message, info);
+          System.exit(1);
+      }
+  :};
+    
 
-   
-/* ------------Declaration of Terminals and Non Terminals Section----------- */
-   
+    
+  /* ------------Declaration of Terminals and Non Terminals Section----------- */
+    
 
-terminal           SEMI, PLUS, MINUS, TIMES, DIVIDE, LPAREN, RPAREN;
-terminal           RKEY, LKEY, VOID, MAIN, COMA, EQUAL;
-terminal           INT,  FLOAT, BOOLEAN, STRING, IF, GREATER, LESS;
+  terminal           SEMI, PLUS, MINUS, TIMES, DIVIDE, LPAREN, RPAREN;
+  terminal           RKEY, LKEY, VOID, MAIN, COMA, EQUAL;
+  terminal           INT,  FLOAT, BOOLEAN, STRING, IF, GREATER, LESS;
 
-terminal Integer NUMBER;
-terminal String ID;
-terminal Float FLOATNUM;
+  terminal Integer NUMBER;
+  terminal String ID;
+  terminal Float FLOATNUM;
+  terminal Boolean BOOLEAN_LIT;
 
-non terminal String tipo;
-non terminal Node expr, expr_part;
-non terminal Node func_section, main_block, func_list, program, expr_dcl_list, declaracion;
-non terminal func, void_decl, main;
-non terminal params, statement, if_statement, comparison_expr, condicion;
-
-
-   
-
-/* -------------Precedence and Associatively of Terminals Section----------- */
-   
-/*
-  Precedence of non terminals could be defined here.  If you do define
-  precedence here you won't need to worry about precedence in the
-  Grammar Section, i.e. that TIMES should have a higher precedence
-  than PLUS.
-  
-  The precedence defined here would look something like this where the
-  lower line always will have higher precedence than the line before it.
-*/   
-  precedence left PLUS, MINUS; 
-  precedence left TIMES, DIVIDE; 
+  non terminal String tipo;
+  non terminal Node expr, expr_part, valor;
+  non terminal Node func_section, main_block, func_list, program, expr_dcl_list, declaracion;
+  non terminal func, void_decl, main;
+  non terminal params, statement, if_statement, comparison_expr, condicion;
 
 
+    
 
-/* ----------------------------Grammar Section-------------------- */
-   
-   main ::= main_block:mb
-          {: RaizNode = new Node(null, null, mb, "root");
-             System.out.println("Arbol");
-             RaizNode.recorrer(tabla);
-             RaizNode.getType(tabla);
-          :}
-        ;
+  /* -------------Precedence and Associatively of Terminals Section----------- */
+    
+  /*
+    Precedence of non terminals could be defined here.  If you do define
+    precedence here you won't need to worry about precedence in the
+    Grammar Section, i.e. that TIMES should have a higher precedence
+    than PLUS.
+    
+    The precedence defined here would look something like this where the
+    lower line always will have higher precedence than the line before it.
+  */   
+    precedence left PLUS, MINUS; 
+    precedence left TIMES, DIVIDE; 
 
-main_block ::= VOID MAIN LPAREN params RPAREN LKEY program:pg RKEY
-                {: RESULT = pg; :}
-              ;
 
-program ::= expr_dcl_list:edl
-             {: RESULT = edl; :}
-           | /* empty */
-           ;
 
-params ::= INT ID:id COMA params
-          | INT ID:id
-          | /* empty */
+  /* ----------------------------Grammar Section-------------------- */
+    
+    main ::= main_block:mb
+            {: RaizNode = new Node(null, null, mb, "root");
+              System.out.println("Arbol");
+              RaizNode.recorrer(tabla);
+              RaizNode.getType(tabla);
+            :}
           ;
 
-declaracion ::= tipo:tp ID:id SEMI
-                 {: RESULT = new Node("=", new Node(id, "Leaf", tp), null, "Declaration" ); :}
-               | tipo:tp ID:id EQUAL expr:ex SEMI
-                 {: RESULT = new Node("=", new Node(id, "Leaf",  tp), ex, "Declaration" ); :}
-               ;
+  main_block ::= VOID MAIN LPAREN params RPAREN LKEY program:pg RKEY
+                  {: RESULT = pg; :}
+                ;
 
-tipo ::= INT {: RESULT = "int"; :}
-        | FLOAT {: RESULT = "float"; :} 
-        | STRING {: RESULT = "string"; :} 
-        | BOOLEAN {: RESULT = "boolean"; :}
-        ;
+  program ::= expr_dcl_list:edl
+              {: RESULT = edl; :}
+            | /* empty */
+            ;
 
-statement ::= if_statement;
+  params ::= INT ID:id COMA params
+            | INT ID:id
+            | /* empty */
+            ;
 
-if_statement ::= IF LPAREN condicion RPAREN LKEY program RKEY;
+  declaracion ::= tipo:tp ID:id SEMI
+                  {: RESULT = new Node("=", new Node(id, "Leaf", tp), null, "Declaration" ); :}
+                | tipo:tp ID:id EQUAL valor:vl SEMI
+                  {: RESULT = new Node("=", new Node(id, "Leaf",  tp), vl, "Declaration" ); :}
+                ;
 
-condicion ::= expr comparison_expr expr;
+  valor ::= expr:ex
+          {: RESULT = ex; :} 
+          | BOOLEAN_LIT:bl 
+          {: RESULT = new Node(bl.toString(), "Leaf", "boolean"); :} 
+          ;
 
-comparison_expr ::= GREATER
-                  | LESS
-                  | EQUAL
+  tipo ::= INT {: RESULT = "int"; :}
+          | FLOAT {: RESULT = "float"; :} 
+          | STRING {: RESULT = "string"; :} 
+          | BOOLEAN {: RESULT = "boolean"; :} 
+          ;
+
+  statement ::= if_statement;
+
+  if_statement ::= IF LPAREN condicion RPAREN LKEY program RKEY;
+
+  condicion ::= expr comparison_expr expr;
+
+  comparison_expr ::= GREATER
+                    | LESS
+                    | EQUAL
+                    ;
+
+  expr_dcl_list ::= expr_dcl_list:edl expr_part:ep
+                    {: RESULT = new Node(null, edl, ep, "expr"); :}
+                  | expr_dcl_list:edl declaracion:dcl
+                    {: RESULT = new Node(null, edl, dcl, "expr"); :}
+                  | expr_dcl_list statement
+                  | expr_part:ep
+                    {: RESULT = ep; :}
+                  | declaracion:dcl
+                  {: RESULT = dcl; :}
+                  | statement
                   ;
 
-expr_dcl_list ::= expr_dcl_list:edl expr_part:ep
-                   {: RESULT = new Node(null, edl, ep, "expr"); :}
-                 | expr_dcl_list:edl declaracion:dcl
-                   {: RESULT = new Node(null, edl, dcl, "expr"); :}
-                 | expr_dcl_list statement
-                 | expr_part:ep
-                   {: RESULT = ep; :}
-                 | declaracion:dcl
-                 {: RESULT = dcl; :}
-                 | statement
-                 ;
+  expr_part ::= expr:ex SEMI
+                {: RESULT = ex; :}
+              ;
 
-expr_part ::= expr:ex SEMI
-               {: RESULT = ex; :}
-             ;
-
-expr ::= expr:ex0 PLUS expr:ex1
-           {: RESULT = new Node("+", ex0, ex1, "Operation"); :}
-       | expr:ex0 MINUS expr:ex1
-           {: RESULT = new Node("-", ex0, ex1, "Operation"); :}
-       | expr:ex0 TIMES expr:ex1
-           {: RESULT = new Node("*", ex0, ex1, "Operation"); :}
-       | expr:ex0 DIVIDE expr:ex1
-           {: RESULT = new Node("/", ex0, ex1, "Operation"); :}
-       | LPAREN expr:ex RPAREN
-           {: RESULT = ex; :}
-       | NUMBER:number
-           {: RESULT = new Node(number.toString(), "Leaf", "int"); :}
-       | FLOATNUM:f
-           {: RESULT = new Node(f.toString(), "Leaf", "float"); :}
-       | ID:id
-           {: RESULT = new Node(id, "Leaf", null); :}
-       ;
+  expr ::= expr:ex0 PLUS expr:ex1
+            {: RESULT = new Node("+", ex0, ex1, "Operation"); :}
+        | expr:ex0 MINUS expr:ex1
+            {: RESULT = new Node("-", ex0, ex1, "Operation"); :}
+        | expr:ex0 TIMES expr:ex1
+            {: RESULT = new Node("*", ex0, ex1, "Operation"); :}
+        | expr:ex0 DIVIDE expr:ex1
+            {: RESULT = new Node("/", ex0, ex1, "Operation"); :}
+        | LPAREN expr:ex RPAREN
+            {: RESULT = ex; :}
+        | NUMBER:number
+            {: RESULT = new Node(number.toString(), "Leaf", "int"); :}
+        | FLOATNUM:f
+            {: RESULT = new Node(f.toString(), "Leaf", "float"); :}
+        | ID:id
+            {: RESULT = new Node(id, "Leaf", null); :}
+        ;
