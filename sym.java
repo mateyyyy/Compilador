@@ -26,6 +26,7 @@ public class sym {
   public static final int EOF = 0;
   public static final int DIVIDE = 6;
   public static final int MAIN = 12;
+  public static final int FLOATNUM = 24;
   public static final int MINUS = 4;
   public static final int error = 1;
   public static final int VOID = 11;
@@ -54,7 +55,8 @@ public class sym {
   "GREATER",
   "LESS",
   "NUMBER",
-  "ID"
+  "ID",
+  "FLOATNUM"
   };
 }
 

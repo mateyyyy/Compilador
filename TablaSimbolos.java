@@ -7,7 +7,7 @@ public class TablaSimbolos {
     }
 
     public void Agregar(String symbol, String type) {
-        if (buscar(symbol) != null) {
+        if (buscar(symbol) == null) {
             Tabla.add(new ListElement(symbol, type));
         } else {
             System.out.println("Variable ya declarada");
@@ -15,7 +15,7 @@ public class TablaSimbolos {
     }
 
     public void Agregar(String symbol, String type, String value) {
-        if (buscar(symbol) != null) {
+        if (buscar(symbol) == null) {
             Tabla.add(new ListElement(symbol, type, value));
         } else {
             System.out.println("Variable ya declarada");

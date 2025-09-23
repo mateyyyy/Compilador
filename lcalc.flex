@@ -76,6 +76,7 @@ WhiteSpace     = {LineTerminator} | [ \t\f]
    one and nine followed by zero or more numbers between zero and nine
    or just a zero.  */
 dec_int_lit = 0 | [1-9][0-9]*
+dec_float_lit = [0-9]+\.[0-9]+
    
 /* A identifier integer is a word beginning a letter between A and
    Z, a and z, or an underscore followed by zero or more letters
@@ -120,6 +121,8 @@ dec_int_id = [A-Za-z_][A-Za-z_0-9]*
                          return symbol(sym.NUMBER, Integer.valueOf(yytext())); }
     {dec_int_id}       { System.out.print(yytext());
                          return symbol(sym.ID, yytext()); }
+    {dec_float_lit}    { System.out.print(yytext());
+                         return symbol(sym.FLOATNUM, Float.valueOf(yytext())); }
     {WhiteSpace}       { /* just skip what was found, do nothing */ }
 }
 

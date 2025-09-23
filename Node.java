@@ -18,33 +18,53 @@ public class Node {
         this.type = type;
     }
 
-    public String getType() {
+
+    public String getType(TablaSimbolos tabla) {
         switch (nodeType) {
             case "Operation":
-                String leftType = left.getType();
-                String rightType = right.getType();
+                String leftType = left.getType(tabla);
+                String rightType = right.getType(tabla);
                 if (rightType.equals(leftType)) {
                     System.out.println("Tipos iguales en operacion : ");
                     System.out.println(this.op);
                     this.type = rightType;
                 } else {
-                    System.out.println("Tipos diferentes en operacion : ");
-                    System.out.println(this.op);
+                    throw new RuntimeException("Los tipos de : " + left.op + ": " + leftType + ", " + right.op + ": " + rightType +" no coinciden");
                 }
                 return type;
 
             case "Declaration":
-                this.type = right.getType();
-                return right.getType();
+                if(right!=null){
+                    leftType = left.getType(tabla);
+                    if(leftType == right.getType(tabla)){
+                        this.type = leftType;
+                        System.out.println("Los tipos coinciden");
+                    }
+                    else{
+                        throw new RuntimeException("Los tipos de las variables: " + left.op + " y " + right.op + " no coinciden");
+                    }
+                }
+                else{
+                    this.type = left.getType(tabla);
+                }
+                return this.type;
 
             case "Leaf":
+                if(this.type == null) {
+                    ListElement var = tabla.buscar(op);
+                    System.out.println("variable encontrada en tabla : " + var);
+                    if(var!=null){
+                        this.type = var.getType();
+                        return type;
+                    }
+                }
                 return this.type;
 
             default:
                 if (right != null)
-                    right.getType();
+                    right.getType(tabla);
                 if (left != null)
-                    left.getType();
+                    left.getType(tabla);
                 return this.type;
         }
     }
@@ -56,13 +76,17 @@ public class Node {
     private void recorrer(String prefijo, TablaSimbolos tabla) {
         String label = (op != null) ? op : (nodeType != null ? nodeType : "null");
         System.out.println(prefijo + label);
-        if ("Declaration".equals(nodeType)) {
+        if (nodeType.equals("Declaration")) {
             if (left != null) { // izquierda es el id
                 String id = left.op;
-                String declType = (right != null) ? right.getType() : type;
+                String declType = left.getType(tabla);
                 String value = (right != null && right.nodeType.equals("Leaf")) ? right.op : null;
-
-                tabla.Agregar(id, declType, value);
+                if(right!=null){
+                    tabla.Agregar(id, declType, value);
+                }
+                else{
+                    tabla.Agregar(id, declType);
+                }
                 System.out.println(prefijo + ">> Declarada variable: " + id + " de tipo " + declType);
             }
         }

@@ -69,7 +69,8 @@ terminal           RKEY, LKEY, VOID, MAIN, COMA, EQUAL;
 terminal           INT,  FLOAT, BOOLEAN, STRING, IF, GREATER, LESS;
 
 terminal Integer NUMBER;
-terminal String ID;   
+terminal String ID;
+terminal Float FLOATNUM;
 
 non terminal String tipo;
 non terminal Node expr, expr_part;
@@ -102,7 +103,7 @@ non terminal params, statement, if_statement, comparison_expr, condicion;
           {: RaizNode = new Node(null, null, mb, "root");
              System.out.println("Arbol");
              RaizNode.recorrer(tabla);
-             RaizNode.getType();
+             RaizNode.getType(tabla);
           :}
         ;
 
@@ -121,7 +122,7 @@ params ::= INT ID:id COMA params
           ;
 
 declaracion ::= tipo:tp ID:id SEMI
-                 {: RESULT = new Node(id, "Leaf", tp ); :}
+                 {: RESULT = new Node("=", new Node(id, "Leaf", tp), null, "Declaration" ); :}
                | tipo:tp ID:id EQUAL expr:ex SEMI
                  {: RESULT = new Node("=", new Node(id, "Leaf",  tp), ex, "Declaration" ); :}
                ;
@@ -171,6 +172,8 @@ expr ::= expr:ex0 PLUS expr:ex1
            {: RESULT = ex; :}
        | NUMBER:number
            {: RESULT = new Node(number.toString(), "Leaf", "int"); :}
+       | FLOATNUM:f
+           {: RESULT = new Node(f.toString(), "Leaf", "float"); :}
        | ID:id
-           {: RESULT = new Node(id, "Leaf", "int"); :}
+           {: RESULT = new Node(id, "Leaf", null); :}
        ;
