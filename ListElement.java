@@ -14,6 +14,10 @@ public class ListElement {
         this.type = type;
     }
 
+    public ListElement(String id) {
+        this.id = id;
+    }
+
     // Getters y setters
     public String getId() {
         return id;
@@ -29,5 +33,9 @@ public class ListElement {
 
     public void setValue(Object value) {
         this.value = value;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 }

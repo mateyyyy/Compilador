@@ -10,6 +10,7 @@
 
   parser code {:
       TablaSimbolos tabla = new TablaSimbolos();
+      AssemblerGenerator ag;
       Node RaizNode;
       public void report_error(String message, Object info) {
     
@@ -74,7 +75,7 @@
   terminal Boolean BOOLEAN_LIT;
 
   non terminal String tipo;
-  non terminal Node expr, expr_part, valor;
+  non terminal Node expr, expr_part, valor, asignacion;
   non terminal Node func_section, main_block, func_list, program, expr_dcl_list, declaracion;
   non terminal func, void_decl, main;
   non terminal params, statement, if_statement, comparison_expr, condicion;
@@ -105,6 +106,10 @@
               System.out.println("Arbol");
               RaizNode.recorrer(tabla);
               RaizNode.getType(tabla);
+              RaizNode.recorridoInterprete(tabla);
+              ag = new AssemblerGenerator();
+              String assemblerCode = ag.generateAssembler(RaizNode);
+              System.out.println("\n--- Código Assembler ---\n" + assemblerCode);
             :}
           ;
 
@@ -126,6 +131,10 @@
                   {: RESULT = new Node("=", new Node(id, "Leaf", tp), null, "Declaration" ); :}
                 | tipo:tp ID:id EQUAL valor:vl SEMI
                   {: RESULT = new Node("=", new Node(id, "Leaf",  tp), vl, "Declaration" ); :}
+                ;
+
+  asignacion ::= ID:id EQUAL valor:vl SEMI
+                {: RESULT = new Node("=", new Node(id, "VarOP"), vl, "Asignacion" ); :}
                 ;
 
   valor ::= expr:ex
@@ -151,15 +160,16 @@
                     | EQUAL
                     ;
 
-  expr_dcl_list ::= expr_dcl_list:edl expr_part:ep
-                    {: RESULT = new Node(null, edl, ep, "expr"); :}
-                  | expr_dcl_list:edl declaracion:dcl
+  expr_dcl_list ::= expr_dcl_list:edl declaracion:dcl
                     {: RESULT = new Node(null, edl, dcl, "expr"); :}
+                  |
+                  expr_dcl_list:edl asignacion:asg
+                    {: RESULT = new Node(null, edl, asg, "expr"); :}
                   | expr_dcl_list statement
-                  | expr_part:ep
-                    {: RESULT = ep; :}
                   | declaracion:dcl
                   {: RESULT = dcl; :}
+                  | asignacion:asg
+                  {: RESULT = asg; :}
                   | statement
                   ;
 
@@ -180,7 +190,7 @@
         | NUMBER:number
             {: RESULT = new Node(number.toString(), "Leaf", "int"); :}
         | FLOATNUM:f
-            {: RESULT = new Node(f.toString(), "Leaf", "float"); :}
+          {: RESULT = new Node(f.toString(), "Leaf", "float"); :}
         | ID:id
-            {: RESULT = new Node(id, "Leaf", null); :}
+          {: RESULT = new Node(id, "VarOP"); :}
         ;

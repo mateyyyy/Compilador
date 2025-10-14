@@ -3,18 +3,19 @@ import java.util.ArrayList;
 public class TablaSimbolos {
     private ArrayList<ListElement> Tabla = new ArrayList<>();
 
-    public TablaSimbolos() {
-    }
+    public TablaSimbolos() {}
 
+    // Declaración sin valor inicial
     public void Agregar(String symbol, String type) {
         if (buscar(symbol) == null) {
-            Tabla.add(new ListElement(symbol, type));
+            Tabla.add(new ListElement(symbol, type, null));
         } else {
             System.out.println("Variable ya declarada");
         }
     }
 
-    public void Agregar(String symbol, String type, String value) {
+    // Declaración con valor inicial (tipado)
+    public void Agregar(String symbol, String type, Object value) {
         if (buscar(symbol) == null) {
             Tabla.add(new ListElement(symbol, type, value));
         } else {
@@ -33,7 +34,7 @@ public class TablaSimbolos {
 
     public void MostrarTabla() {
         for (ListElement s : Tabla) {
-            System.out.println(s.getId() + " : " + s.getValue());
+            System.out.println(s.getId() + " (" + s.getType() + ") = " + s.getValue());
         }
     }
 }

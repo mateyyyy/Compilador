@@ -1,4 +1,4 @@
 void main () {
- float y = 5.9;
- 5.0 + x;
+int x;
+x = 1 + 2;
 }
