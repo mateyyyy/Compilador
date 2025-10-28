@@ -1,4 +1,7 @@
 void main () {
-int x;
-x = 1 + 2;
+    int x = 5;
+    if(x != 3){
+        int y;
+        y = 5;
+    }
 }

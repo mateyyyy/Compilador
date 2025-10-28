@@ -66,19 +66,19 @@
     
 
   terminal           SEMI, PLUS, MINUS, TIMES, DIVIDE, LPAREN, RPAREN;
-  terminal           RKEY, LKEY, VOID, MAIN, COMA, EQUAL;
-  terminal           INT,  FLOAT, BOOLEAN, STRING, IF, GREATER, LESS;
+  terminal           RKEY, LKEY, VOID, MAIN, COMA, EQUAL, DOUBLEEQUAL, NOTEQUAL;
+  terminal           INT,  FLOAT, BOOLEAN, STRING, IF, ELSE, GREATER, LESS;
 
   terminal Integer NUMBER;
   terminal String ID;
   terminal Float FLOATNUM;
   terminal Boolean BOOLEAN_LIT;
 
-  non terminal String tipo;
-  non terminal Node expr, expr_part, valor, asignacion;
+  non terminal String tipo, comparison_expr;
+  non terminal Node expr, expr_part, valor, asignacion, statement, if_statement, condicion;
   non terminal Node func_section, main_block, func_list, program, expr_dcl_list, declaracion;
   non terminal func, void_decl, main;
-  non terminal params, statement, if_statement, comparison_expr, condicion;
+  non terminal params;
 
 
     
@@ -108,8 +108,9 @@
               RaizNode.getType(tabla);
               RaizNode.recorridoInterprete(tabla);
               ag = new AssemblerGenerator();
-              String assemblerCode = ag.generateAssembler(RaizNode);
+              String assemblerCode = ag.generateAssembler(RaizNode, tabla);
               System.out.println("\n--- Código Assembler ---\n" + assemblerCode);
+              ag.saveToFile("salida.txt");
             :}
           ;
 
@@ -146,18 +147,38 @@
   tipo ::= INT {: RESULT = "int"; :}
           | FLOAT {: RESULT = "float"; :} 
           | STRING {: RESULT = "string"; :} 
-          | BOOLEAN {: RESULT = "boolean"; :} 
+          | BOOLEAN {: RESULT = "boolean"; :}
           ;
 
-  statement ::= if_statement;
+  statement ::= if_statement:is
+              {: RESULT = is; :};
 
-  if_statement ::= IF LPAREN condicion RPAREN LKEY program RKEY;
+  if_statement ::= IF LPAREN condicion:cd RPAREN LKEY program:pg RKEY
+                  {: RESULT = new Node(null, cd, pg, "if"); :}
+                  |
+                  IF LPAREN condicion:cd RPAREN LKEY program:pg RKEY ELSE LKEY program:pgelse RKEY
+                  {:
+                  Node ifNode = new Node(null, cd, pg, "if");
+                  Node elseNode = new Node(null, null, pgelse, "else");
+                  RESULT = new Node(null, ifNode, elseNode, "ifelse"); :}
+                  ;
 
-  condicion ::= expr comparison_expr expr;
+  condicion ::= expr:ex0 comparison_expr:ce expr:ex1
+                  {: RESULT = new Node(ce, ex0, ex1, "condition"); :}
+                ;
 
   comparison_expr ::= GREATER
+                      {: RESULT = ">"; :}
                     | LESS
-                    | EQUAL
+                      {: RESULT = "<"; :}
+                    | DOUBLEEQUAL
+                      {: RESULT = "=="; :}
+                    | NOTEQUAL
+                      {: RESULT = "!="; :}
+                    | LESS EQUAL
+                      {: RESULT = "<="; :}
+                    | GREATER EQUAL
+                    {: RESULT = ">="; :}
                     ;
 
   expr_dcl_list ::= expr_dcl_list:edl declaracion:dcl
@@ -165,12 +186,14 @@
                   |
                   expr_dcl_list:edl asignacion:asg
                     {: RESULT = new Node(null, edl, asg, "expr"); :}
-                  | expr_dcl_list statement
+                  | expr_dcl_list:edl statement:st
+                    {: RESULT = new Node(null, edl, st, "expr"); :}
                   | declaracion:dcl
                   {: RESULT = dcl; :}
                   | asignacion:asg
                   {: RESULT = asg; :}
-                  | statement
+                  | statement:st
+                  {: RESULT = st; :}
                   ;
 
   expr_part ::= expr:ex SEMI
