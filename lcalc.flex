@@ -110,13 +110,15 @@ dec_int_id = [A-Za-z_][A-Za-z_0-9]*
 /*  "return"           { System.out.print(" return "); return symbol(sym.RETURN); } */
     "="                { System.out.print(" = "); return symbol(sym.EQUAL); }
     "!="                { System.out.print(" != "); return symbol(sym.NOTEQUAL); }
-   "=="                { System.out.print(" == "); return symbol(sym.DOUBLEEQUAL); }
+    "=="                { System.out.print(" == "); return symbol(sym.DOUBLEEQUAL); }
     "float"            { System.out.print(" float "); return symbol(sym.FLOAT); }
     "String"           { System.out.print(" String "); return symbol(sym.STRING); }
     "boolean"          { System.out.print(" boolean "); return symbol(sym.BOOLEAN); }
     "if"               { System.out.print(" if "); return symbol(sym.IF); }
     "else"             { System.out.print(" else "); return symbol(sym.ELSE); }  
-/*  "while"            { System.out.print(" while "); return symbol(sym.WHILE); } */
+    "while"            { System.out.print(" while "); return symbol(sym.WHILE); }
+    "&&"                { System.out.print(" && "); return symbol(sym.AND); }
+    "||"                { System.out.print(" || "); return symbol(sym.OR); }
 /*  "for"              { System.out.print(" for "); return symbol(sym.FOR); } */
     ">"                { System.out.print(" > "); return symbol(sym.GREATER); }
     "<"                { System.out.print(" < "); return symbol(sym.LESS); }

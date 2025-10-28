@@ -1,7 +1,6 @@
 void main () {
-    int x = 5;
-    if(x != 3){
-        int y;
-        y = 5;
+    int x = 9;
+    while(x != 10){
+        x = x + 1;
     }
 }

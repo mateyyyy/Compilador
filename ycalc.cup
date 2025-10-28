@@ -65,17 +65,17 @@
   /* ------------Declaration of Terminals and Non Terminals Section----------- */
     
 
-  terminal           SEMI, PLUS, MINUS, TIMES, DIVIDE, LPAREN, RPAREN;
+  terminal           SEMI, PLUS, MINUS, TIMES, DIVIDE, LPAREN, RPAREN, AND, OR;
   terminal           RKEY, LKEY, VOID, MAIN, COMA, EQUAL, DOUBLEEQUAL, NOTEQUAL;
-  terminal           INT,  FLOAT, BOOLEAN, STRING, IF, ELSE, GREATER, LESS;
+  terminal           INT,  FLOAT, BOOLEAN, STRING, IF, ELSE, WHILE, GREATER, LESS;
 
   terminal Integer NUMBER;
   terminal String ID;
   terminal Float FLOATNUM;
   terminal Boolean BOOLEAN_LIT;
 
-  non terminal String tipo, comparison_expr;
-  non terminal Node expr, expr_part, valor, asignacion, statement, if_statement, condicion;
+  non terminal String tipo, comparison_expr, and_or;
+  non terminal Node expr, expr_part, valor, asignacion, statement, if_statement, while_statement, condicion;
   non terminal Node func_section, main_block, func_list, program, expr_dcl_list, declaracion;
   non terminal func, void_decl, main;
   non terminal params;
@@ -151,7 +151,11 @@
           ;
 
   statement ::= if_statement:is
-              {: RESULT = is; :};
+              {: RESULT = is; :}
+              |
+              while_statement:ws
+              {: RESULT = ws; :}
+              ;
 
   if_statement ::= IF LPAREN condicion:cd RPAREN LKEY program:pg RKEY
                   {: RESULT = new Node(null, cd, pg, "if"); :}
@@ -163,9 +167,21 @@
                   RESULT = new Node(null, ifNode, elseNode, "ifelse"); :}
                   ;
 
-  condicion ::= expr:ex0 comparison_expr:ce expr:ex1
+  while_statement ::= WHILE LPAREN condicion:cd RPAREN LKEY program:pg RKEY
+                      {: RESULT = new Node(null, cd, pg, "while"); :};
+
+  condicion ::= expr:ex0 comparison_expr:ce expr:ex1 and_or:ao condicion:cd
+                  {: 
+                  Node compIz = new Node(ce, ex0, ex1, "condition");
+                  RESULT = new Node(null, compIz, cd, ao); 
+                  :}
+                |
+                expr:ex0 comparison_expr:ce expr:ex1
                   {: RESULT = new Node(ce, ex0, ex1, "condition"); :}
                 ;
+
+  and_or ::= AND {: RESULT = "AND"; :}
+            | OR {: RESULT = "OR"; :};
 
   comparison_expr ::= GREATER
                       {: RESULT = ">"; :}

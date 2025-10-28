@@ -103,6 +103,10 @@ public class AssemblerGenerator {
                 emit(endElseLabel + ":");
                 break;
 
+            case "while":
+                generateWhile(nodo, tabla);
+                break;
+
             default:
                 if (nodo.left != null)
                     generateNode(nodo.left, tabla);
@@ -208,32 +212,26 @@ public class AssemblerGenerator {
             switch (nodeCond.op) {
                 case ">":
                     emit("jle " + ifLabel);
-
                     break;
 
                 case "==":
                     emit("jne " + ifLabel);
-
                     break;
 
                 case "<":
                     emit("jge " + ifLabel);
-
                     break;
 
                 case ">=":
                     emit("jl " + ifLabel);
-
                     break;
 
                 case "<=":
                     emit("jg " + ifLabel);
-
                     break;
 
                 case "!=":
                     emit("je " + ifLabel);
-
                     break;
 
                 default:
@@ -245,5 +243,62 @@ public class AssemblerGenerator {
             }
             emit(ifLabel + ":");
         }
+    }
+
+    private void generateWhile(Node nodo, TablaSimbolos tabla) {
+        String labelStart = newLabel();
+        emit(labelStart + ": ");
+        Node comp = nodo.left;
+        String leftValue = "";
+        String rightValue = "";
+        String ifLabel = newLabel();
+        if (comp.left.nodeType == "VarOP") {
+            leftValue = varOffsets.get(comp.left.op).toString();
+            leftValue += "(%rbp)";
+        } else {
+            leftValue = "$" + comp.left.op;
+        }
+        if (comp.right.nodeType == "VarOP") {
+            rightValue = varOffsets.get(comp.right.op).toString();
+            rightValue += "(%rbp)";
+        } else {
+            rightValue = "$" + comp.right.op;
+        }
+        if (comp.left.nodeType == "VarOP") {
+            emit("cmp " + rightValue + ", " + leftValue);
+        } else {
+            emit("cmp " + leftValue + ", " + rightValue);
+        }
+        switch (comp.op) {
+            case ">":
+                emit("jle " + ifLabel);
+                break;
+
+            case "==":
+                emit("jne " + ifLabel);
+                break;
+
+            case "<":
+                emit("jge " + ifLabel);
+                break;
+
+            case ">=":
+                emit("jl " + ifLabel);
+                break;
+
+            case "<=":
+                emit("jg " + ifLabel);
+                break;
+
+            case "!=":
+                emit("je " + ifLabel);
+                break;
+
+            default:
+                break;
+        }
+        generateNode(nodo.right, tabla);
+        emit("jmp " + labelStart);
+        emit(ifLabel + ":");
     }
 }
