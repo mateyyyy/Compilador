@@ -216,7 +216,7 @@ public class AssemblerGenerator {
         if (operadores.contains(comp.op)) {
             generateCondicion(comp, falseLabel);
         } else if (comp.nodeType.equals("AND")) {
-            generateAnd(comp, falseLabel);
+            generateAnd(comp, falseLabel, null, null, false);
         } else if (comp.nodeType.equals("OR")) {
             generateOr(comp, falseLabel);
         }
@@ -325,15 +325,15 @@ public class AssemblerGenerator {
         }
     }
 
-    public void generateAnd(Node nodo, String falseLabel) {
+    public void generateAnd(Node nodo, String falseLabel, String trueLabel, String secondConditionLabel, boolean or) {
         boolean isLeftCondition = true;
         boolean isRightCondition = true;
         if (nodo.left.nodeType.equals("AND")) {
-            generateAnd(nodo.left, falseLabel);
+            generateAnd(nodo.left, falseLabel, trueLabel, null, false);
             isLeftCondition = false;
         }
         if (nodo.right.nodeType.equals("AND")) {
-            generateAnd(nodo.right, falseLabel);
+            generateAnd(nodo.right, falseLabel, trueLabel, null, false);
             isRightCondition = false;
         }
 
@@ -346,24 +346,31 @@ public class AssemblerGenerator {
             isRightCondition = false;
         }
 
-        if (isLeftCondition) {
+        if (isLeftCondition && !or) {
             generateCondicion(nodo.left, falseLabel);
+        } else {
+            generateCondicion(nodo.left, secondConditionLabel); // en caso de ser falso evalua la segunda condicion
         }
-        if (isRightCondition) {
+        if (isRightCondition && !or) {
             generateCondicion(nodo.right, falseLabel);
+        } else {
+            generateCondicionInverse(nodo.right, trueLabel);
         }
+
     }
 
     public void generateOr(Node nodo, String falseLabel) {
         boolean isLeftCondition = true;
         boolean isRightCondition = true;
         String trueLabel = newLabel();
+        String secondConditionLabel = newLabel();
+
         if (nodo.left.nodeType.equals("AND")) {
-            generateAnd(nodo.left, falseLabel);
+            generateAnd(nodo.left, falseLabel, trueLabel, secondConditionLabel, true);
             isLeftCondition = false;
         }
         if (nodo.right.nodeType.equals("AND")) {
-            generateAnd(nodo.right, falseLabel);
+            generateAnd(nodo.right, falseLabel, trueLabel, secondConditionLabel, true);
             isRightCondition = false;
         }
 
@@ -375,14 +382,14 @@ public class AssemblerGenerator {
             generateOr(nodo.right, falseLabel);
             isRightCondition = false;
         }
-
+        emit(secondConditionLabel + " : ");
         if (isLeftCondition) {
-            generateCondicion(nodo.left, trueLabel);
+            generateCondicionInverse(nodo.left, trueLabel);
         }
+
         if (isRightCondition) {
             generateCondicion(nodo.right, falseLabel);
         }
-
         emit(trueLabel + " :");
     }
 }
