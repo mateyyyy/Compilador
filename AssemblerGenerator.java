@@ -1,7 +1,9 @@
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class AssemblerGenerator {
     private StringBuilder code = new StringBuilder();
@@ -188,55 +190,8 @@ public class AssemblerGenerator {
     private void generateIf(Node nodo, TablaSimbolos tabla, String endElseLabel) {
         if (nodo.left.nodeType == "condition") {
             Node nodeCond = nodo.left;
-            String leftValue = "";
-            String rightValue = "";
-            if (nodeCond.left.nodeType == "VarOP") {
-                leftValue = varOffsets.get(nodeCond.left.op).toString();
-                leftValue += "(%rbp)";
-            } else {
-                leftValue = "$" + nodeCond.left.op;
-            }
-
-            if (nodeCond.right.nodeType == "VarOP") {
-                rightValue = varOffsets.get(nodeCond.right.op).toString();
-                rightValue += "(%rbp)";
-            } else {
-                rightValue = "$" + nodeCond.right.op;
-            }
-            if (nodeCond.left.nodeType == "VarOP") {
-                emit("cmpq " + rightValue + ", " + leftValue);
-            } else {
-                emit("cmpq " + leftValue + ", " + rightValue);
-            }
             String ifLabel = newLabel();
-            switch (nodeCond.op) {
-                case ">":
-                    emit("jle " + ifLabel);
-                    break;
-
-                case "==":
-                    emit("jne " + ifLabel);
-                    break;
-
-                case "<":
-                    emit("jge " + ifLabel);
-                    break;
-
-                case ">=":
-                    emit("jl " + ifLabel);
-                    break;
-
-                case "<=":
-                    emit("jg " + ifLabel);
-                    break;
-
-                case "!=":
-                    emit("je " + ifLabel);
-                    break;
-
-                default:
-                    break;
-            }
+            generateCondicion(nodeCond, ifLabel);
             generateNode(nodo.right, tabla);
             if (endElseLabel != null) {
                 emit("jmp " + endElseLabel);
@@ -249,56 +204,185 @@ public class AssemblerGenerator {
         String labelStart = newLabel();
         emit(labelStart + ": ");
         Node comp = nodo.left;
+        String falseLabel = newLabel();
+
+        Set<String> operadores = new HashSet<>();
+        operadores.add(">");
+        operadores.add("<");
+        operadores.add(">=");
+        operadores.add("<=");
+        operadores.add("==");
+        operadores.add("!=");
+        if (operadores.contains(comp.op)) {
+            generateCondicion(comp, falseLabel);
+        } else if (comp.nodeType.equals("AND")) {
+            generateAnd(comp, falseLabel);
+        } else if (comp.nodeType.equals("OR")) {
+            generateOr(comp, falseLabel);
+        }
+        generateNode(nodo.right, tabla);
+        emit("jmp " + labelStart);
+        emit(falseLabel + ":");
+    }
+
+    public void generateCondicion(Node comp, String falseLabel) {
         String leftValue = "";
         String rightValue = "";
-        String ifLabel = newLabel();
-        if (comp.left.nodeType == "VarOP") {
+        if (comp.left.nodeType.equals("VarOP")) {
             leftValue = varOffsets.get(comp.left.op).toString();
             leftValue += "(%rbp)";
         } else {
             leftValue = "$" + comp.left.op;
         }
-        if (comp.right.nodeType == "VarOP") {
+        if (comp.right.nodeType.equals("VarOP")) {
             rightValue = varOffsets.get(comp.right.op).toString();
             rightValue += "(%rbp)";
         } else {
             rightValue = "$" + comp.right.op;
         }
-        if (comp.left.nodeType == "VarOP") {
+        if (comp.left.nodeType.equals("VarOP")) {
             emit("cmp " + rightValue + ", " + leftValue);
         } else {
             emit("cmp " + leftValue + ", " + rightValue);
         }
         switch (comp.op) {
             case ">":
-                emit("jle " + ifLabel);
+                emit("jle " + falseLabel);
                 break;
 
             case "==":
-                emit("jne " + ifLabel);
+                emit("jne " + falseLabel);
                 break;
 
             case "<":
-                emit("jge " + ifLabel);
+                emit("jge " + falseLabel);
                 break;
 
             case ">=":
-                emit("jl " + ifLabel);
+                emit("jl " + falseLabel);
                 break;
 
             case "<=":
-                emit("jg " + ifLabel);
+                emit("jg " + falseLabel);
                 break;
 
             case "!=":
-                emit("je " + ifLabel);
+                emit("je " + falseLabel);
                 break;
 
             default:
                 break;
         }
-        generateNode(nodo.right, tabla);
-        emit("jmp " + labelStart);
-        emit(ifLabel + ":");
+    }
+
+    public void generateCondicionInverse(Node comp, String falseLabel) {
+        String leftValue = "";
+        String rightValue = "";
+        if (comp.left.nodeType.equals("VarOP")) {
+            leftValue = varOffsets.get(comp.left.op).toString();
+            leftValue += "(%rbp)";
+        } else {
+            leftValue = "$" + comp.left.op;
+        }
+        if (comp.right.nodeType.equals("VarOP")) {
+            rightValue = varOffsets.get(comp.right.op).toString();
+            rightValue += "(%rbp)";
+        } else {
+            rightValue = "$" + comp.right.op;
+        }
+        if (comp.left.nodeType.equals("VarOP")) {
+            emit("cmp " + rightValue + ", " + leftValue);
+        } else {
+            emit("cmp " + leftValue + ", " + rightValue);
+        }
+        switch (comp.op) {
+            case "<=":
+                emit("jle " + falseLabel);
+                break;
+
+            case "!=":
+                emit("jne " + falseLabel);
+                break;
+
+            case ">=":
+                emit("jge " + falseLabel);
+                break;
+
+            case "<":
+                emit("jl " + falseLabel);
+                break;
+
+            case ">":
+                emit("jg " + falseLabel);
+                break;
+
+            case "==":
+                emit("je " + falseLabel);
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    public void generateAnd(Node nodo, String falseLabel) {
+        boolean isLeftCondition = true;
+        boolean isRightCondition = true;
+        if (nodo.left.nodeType.equals("AND")) {
+            generateAnd(nodo.left, falseLabel);
+            isLeftCondition = false;
+        }
+        if (nodo.right.nodeType.equals("AND")) {
+            generateAnd(nodo.right, falseLabel);
+            isRightCondition = false;
+        }
+
+        if (nodo.left.nodeType.equals("OR")) {
+            generateOr(nodo.left, falseLabel);
+            isLeftCondition = false;
+        }
+        if (nodo.right.nodeType.equals("OR")) {
+            generateOr(nodo.right, falseLabel);
+            isRightCondition = false;
+        }
+
+        if (isLeftCondition) {
+            generateCondicion(nodo.left, falseLabel);
+        }
+        if (isRightCondition) {
+            generateCondicion(nodo.right, falseLabel);
+        }
+    }
+
+    public void generateOr(Node nodo, String falseLabel) {
+        boolean isLeftCondition = true;
+        boolean isRightCondition = true;
+        String trueLabel = newLabel();
+        if (nodo.left.nodeType.equals("AND")) {
+            generateAnd(nodo.left, falseLabel);
+            isLeftCondition = false;
+        }
+        if (nodo.right.nodeType.equals("AND")) {
+            generateAnd(nodo.right, falseLabel);
+            isRightCondition = false;
+        }
+
+        if (nodo.left.nodeType.equals("OR")) {
+            generateOr(nodo.left, falseLabel);
+            isLeftCondition = false;
+        }
+        if (nodo.right.nodeType.equals("OR")) {
+            generateOr(nodo.right, falseLabel);
+            isRightCondition = false;
+        }
+
+        if (isLeftCondition) {
+            generateCondicion(nodo.left, trueLabel);
+        }
+        if (isRightCondition) {
+            generateCondicion(nodo.right, falseLabel);
+        }
+
+        emit(trueLabel + " :");
     }
 }
