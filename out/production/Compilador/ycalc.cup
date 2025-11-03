@@ -65,10 +65,9 @@
   /* ------------Declaration of Terminals and Non Terminals Section----------- */
     
 
-  terminal           SEMI, PLUS, MINUS, TIMES, DIVIDE, LPAREN, RPAREN, AND, OR;
+  terminal           SEMI, PLUS, MINUS, TIMES, DIVIDE, LPAREN, RPAREN;
   terminal           RKEY, LKEY, VOID, MAIN, COMA, EQUAL, DOUBLEEQUAL, NOTEQUAL;
-  terminal           INT,  FLOAT, BOOLEAN, STRING, IF, ELSE, WHILE, GREATER, LESS;
-  terminal           LESSEQUAL, GREATEREQUAL;
+  terminal           INT,  FLOAT, BOOLEAN, STRING, IF, ELSE, GREATER, LESS;
 
   terminal Integer NUMBER;
   terminal String ID;
@@ -76,7 +75,7 @@
   terminal Boolean BOOLEAN_LIT;
 
   non terminal String tipo, comparison_expr;
-  non terminal Node expr, expr_part, valor, asignacion, statement, if_statement, while_statement, condicion;
+  non terminal Node expr, expr_part, valor, asignacion, statement, if_statement, condicion;
   non terminal Node func_section, main_block, func_list, program, expr_dcl_list, declaracion;
   non terminal func, void_decl, main;
   non terminal params;
@@ -95,10 +94,9 @@
     The precedence defined here would look something like this where the
     lower line always will have higher precedence than the line before it.
   */   
-   precedence left OR;
-   precedence left AND;
-   precedence left PLUS, MINUS;
-   precedence left TIMES, DIVIDE;
+    precedence left PLUS, MINUS; 
+    precedence left TIMES, DIVIDE; 
+
 
 
   /* ----------------------------Grammar Section-------------------- */
@@ -153,11 +151,7 @@
           ;
 
   statement ::= if_statement:is
-              {: RESULT = is; :}
-              |
-              while_statement:ws
-              {: RESULT = ws; :}
-              ;
+              {: RESULT = is; :};
 
   if_statement ::= IF LPAREN condicion:cd RPAREN LKEY program:pg RKEY
                   {: RESULT = new Node(null, cd, pg, "if"); :}
@@ -169,18 +163,9 @@
                   RESULT = new Node(null, ifNode, elseNode, "ifelse"); :}
                   ;
 
-  while_statement ::= WHILE LPAREN condicion:cd RPAREN LKEY program:pg RKEY
-                      {: RESULT = new Node(null, cd, pg, "while"); :};
-
-  condicion ::= condicion:c1 OR condicion:c2
-                {: RESULT = new Node("OR", c1, c2, "OR"); :}
-            |
-            condicion:c1 AND condicion:c2
-                {: RESULT = new Node("AND", c1, c2, "AND"); :}
-            |
-            expr:ex0 comparison_expr:ce expr:ex1
-                {: RESULT = new Node(ce, ex0, ex1, "condition"); :}
-            ;
+  condicion ::= expr:ex0 comparison_expr:ce expr:ex1
+                  {: RESULT = new Node(ce, ex0, ex1, "condition"); :}
+                ;
 
   comparison_expr ::= GREATER
                       {: RESULT = ">"; :}
@@ -190,9 +175,9 @@
                       {: RESULT = "=="; :}
                     | NOTEQUAL
                       {: RESULT = "!="; :}
-                    | LESSEQUAL
+                    | LESS EQUAL
                       {: RESULT = "<="; :}
-                    | GREATEREQUAL
+                    | GREATER EQUAL
                     {: RESULT = ">="; :}
                     ;
 

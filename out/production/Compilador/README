@@ -1,0 +1,19 @@
+A small JFlex+Cup parser example 
+
+To compile:
+>jflex lcalc.flex
+>java java_cup.Main < ycalc.cup
+>javac Main.java
+
+To run:
+>java Main test.txt
+
+
+Files:
+
+Main.java       demo of a main program
+README          this file
+lcalc.flex      the lexer spec
+ycalc.cup       the parser spec
+test.txt        sample input for testing
+

@@ -122,6 +122,8 @@ dec_int_id = [A-Za-z_][A-Za-z_0-9]*
 /*  "for"              { System.out.print(" for "); return symbol(sym.FOR); } */
     ">"                { System.out.print(" > "); return symbol(sym.GREATER); }
     "<"                { System.out.print(" < "); return symbol(sym.LESS); }
+    "<="               { System.out.print(" <= "); return symbol(sym.LESSEQUAL); }
+    ">="               { System.out.print(" >= "); return symbol(sym.GREATEREQUAL); }
     {boolType}           { System.out.print(yytext()); return symbol(sym.BOOLEAN_LIT, Boolean.valueOf(yytext())); }
     {dec_int_lit}      { System.out.print(yytext());
                          return symbol(sym.NUMBER, Integer.valueOf(yytext())); }
