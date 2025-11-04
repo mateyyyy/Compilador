@@ -6,7 +6,7 @@
 /** CUP generated class containing symbol constants. */
 public class sym {
   /* terminals */
-  public static final int BOOLEAN_LIT = 31;
+  public static final int BOOLEAN_LIT = 33;
   public static final int TIMES = 5;
   public static final int AND = 9;
   public static final int ELSE = 24;
@@ -22,21 +22,23 @@ public class sym {
   public static final int RKEY = 11;
   public static final int GREATER = 26;
   public static final int IF = 23;
+  public static final int LESSEQUAL = 28;
   public static final int LPAREN = 7;
-  public static final int ID = 29;
+  public static final int ID = 31;
   public static final int LKEY = 12;
   public static final int BOOLEAN = 21;
   public static final int STRING = 22;
   public static final int COMA = 15;
   public static final int FLOAT = 20;
-  public static final int NUMBER = 28;
+  public static final int NUMBER = 30;
   public static final int EOF = 0;
   public static final int DIVIDE = 6;
   public static final int MAIN = 14;
-  public static final int FLOATNUM = 30;
+  public static final int FLOATNUM = 32;
   public static final int MINUS = 4;
   public static final int error = 1;
   public static final int VOID = 13;
+  public static final int GREATEREQUAL = 29;
   public static final int LESS = 27;
   public static final String[] terminalNames = new String[] {
   "EOF",
@@ -67,6 +69,8 @@ public class sym {
   "WHILE",
   "GREATER",
   "LESS",
+  "LESSEQUAL",
+  "GREATEREQUAL",
   "NUMBER",
   "ID",
   "FLOATNUM",

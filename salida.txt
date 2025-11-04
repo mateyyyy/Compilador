@@ -6,15 +6,20 @@ main:
     movq %rax, -8(%rbp)
     movq $1, %rax
     movq %rax, -16(%rbp)
-    .L0: 
-    cmp $10, -8(%rbp)
-    je .L3
-    cmp $1, -8(%rbp)
+    .L0:
+    movq -8(%rbp), %rax
+    cmp $10, %rax
+    je .L4
+    movq -8(%rbp), %rax
+    cmp $1, %rax
     jg .L2
-    .L3 : 
-    cmp $2, -8(%rbp)
+    .L4:
+    movq -8(%rbp), %rax
+    cmp $2, %rax
     jne .L1
-    .L2 :
+    jmp .L3
+    .L2:
+    .L3:
     movq -8(%rbp), %rax
     addq $1, %rax
     movq %rax, -24(%rbp)

@@ -1,9 +1,7 @@
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 public class AssemblerGenerator {
     private StringBuilder code = new StringBuilder();
@@ -32,7 +30,6 @@ public class AssemblerGenerator {
         return code.toString();
     }
 
-    /** NUEVO MÉTODO **/
     public void saveToFile(String fileName) {
         try (FileWriter writer = new FileWriter(fileName)) {
             writer.write(code.toString());
@@ -187,209 +184,152 @@ public class AssemblerGenerator {
         return label;
     }
 
-    private void generateIf(Node nodo, TablaSimbolos tabla, String endElseLabel) {
-        if (nodo.left.nodeType == "condition") {
-            Node nodeCond = nodo.left;
-            String ifLabel = newLabel();
-            generateCondicion(nodeCond, ifLabel);
-            generateNode(nodo.right, tabla);
-            if (endElseLabel != null) {
-                emit("jmp " + endElseLabel);
-            }
-            emit(ifLabel + ":");
+    // ============= FUNCIONES PARA MANEJO DE CONDICIONES =============
+
+    /**
+     * Genera código para una condición lógica completa (puede incluir AND, OR, o condiciones simples)
+     * Salta a falseLabel si la condición completa es FALSE
+     */
+    private void generateCondicionLogica(Node nodo, String falseLabel) {
+        if (nodo.nodeType.equals("AND")) {
+            // Para AND: si cualquiera falla, ir a falseLabel
+            generateCondicionLogica(nodo.left, falseLabel);
+            generateCondicionLogica(nodo.right, falseLabel);
+
+        } else if (nodo.nodeType.equals("OR")) {
+            // Para OR: si la primera es TRUE, saltar el resto (cortocircuito)
+            String trueLabel = newLabel();
+            String endLabel = newLabel();
+
+            // Evaluar primera condición: si es TRUE, ir a trueLabel (éxito)
+            generateCondicionInvertida(nodo.left, trueLabel);
+
+            // Si llegamos aquí, primera fue FALSE, evaluar segunda normalmente
+            generateCondicionLogica(nodo.right, falseLabel);
+            emit("jmp " + endLabel);
+
+            emit(trueLabel + ":");
+            emit(endLabel + ":");
+
+        } else if (nodo.nodeType.equals("condition")) {
+            // Condición simple
+            generateCondicionSimple(nodo, falseLabel);
         }
     }
 
-    private void generateWhile(Node nodo, TablaSimbolos tabla) {
-        String labelStart = newLabel();
-        emit(labelStart + ": ");
-        Node comp = nodo.left;
+    /**
+     * Genera código para una condición invertida
+     * Salta a trueLabel si la condición es TRUE
+     * Se usa para OR (evaluación con cortocircuito)
+     */
+    private void generateCondicionInvertida(Node nodo, String trueLabel) {
+        if (nodo.nodeType.equals("condition")) {
+            String leftValue = getValueString(nodo.left);
+            String rightValue = getValueString(nodo.right);
+
+            emit("movq " + leftValue + ", %rax");
+            emit("cmp " + rightValue + ", %rax");
+
+            // Saltos INVERTIDOS (si condición es TRUE, saltar)
+            switch (nodo.op) {
+                case ">":  emit("jg " + trueLabel); break;
+                case "<":  emit("jl " + trueLabel); break;
+                case ">=": emit("jge " + trueLabel); break;
+                case "<=": emit("jle " + trueLabel); break;
+                case "==": emit("je " + trueLabel); break;
+                case "!=": emit("jne " + trueLabel); break;
+            }
+        } else if (nodo.nodeType.equals("AND")) {
+            // AND invertido: necesitamos que AMBAS sean TRUE para saltar
+            String checkSecond = newLabel();
+
+            // Si primera es FALSE, no saltamos (ir a checkSecond)
+            generateCondicionSimple(nodo.left, checkSecond);
+            // Si llegamos aquí, primera es TRUE, verificar segunda
+            generateCondicionInvertida(nodo.right, trueLabel);
+
+            emit(checkSecond + ":");
+
+        } else if (nodo.nodeType.equals("OR")) {
+            // OR invertido: si CUALQUIERA es TRUE, saltamos
+            generateCondicionInvertida(nodo.left, trueLabel);
+            generateCondicionInvertida(nodo.right, trueLabel);
+        }
+    }
+
+    /**
+     * Genera código para una condición simple (>, <, ==, etc.)
+     * Salta a falseLabel si la condición es FALSE
+     */
+    private void generateCondicionSimple(Node nodo, String falseLabel) {
+        String leftValue = getValueString(nodo.left);
+        String rightValue = getValueString(nodo.right);
+
+        emit("movq " + leftValue + ", %rax");
+        emit("cmp " + rightValue + ", %rax");
+
+        // Saltos normales (si condición es FALSE, saltar)
+        switch (nodo.op) {
+            case ">":  emit("jle " + falseLabel); break;
+            case "<":  emit("jge " + falseLabel); break;
+            case ">=": emit("jl " + falseLabel); break;
+            case "<=": emit("jg " + falseLabel); break;
+            case "==": emit("jne " + falseLabel); break;
+            case "!=": emit("je " + falseLabel); break;
+        }
+    }
+
+    /**
+     * Helper para obtener la representación en string de un valor
+     * (variable o constante)
+     */
+    private String getValueString(Node node) {
+        if (node.nodeType.equals("VarOP")) {
+            return varOffsets.get(node.op) + "(%rbp)";
+        } else {
+            return "$" + node.op;
+        }
+    }
+
+    // ============= GENERACIÓN DE IF Y WHILE =============
+
+    /**
+     * Genera código para un IF statement
+     */
+    private void generateIf(Node nodo, TablaSimbolos tabla, String endElseLabel) {
         String falseLabel = newLabel();
 
-        Set<String> operadores = new HashSet<>();
-        operadores.add(">");
-        operadores.add("<");
-        operadores.add(">=");
-        operadores.add("<=");
-        operadores.add("==");
-        operadores.add("!=");
-        if (operadores.contains(comp.op)) {
-            generateCondicion(comp, falseLabel);
-        } else if (comp.nodeType.equals("AND")) {
-            generateAnd(comp, falseLabel, null, null, false);
-        } else if (comp.nodeType.equals("OR")) {
-            generateOr(comp, falseLabel);
-        }
+        // Generar condición (salta a falseLabel si es FALSE)
+        generateCondicionLogica(nodo.left, falseLabel);
+
+        // Código del if (se ejecuta si condición es TRUE)
         generateNode(nodo.right, tabla);
-        emit("jmp " + labelStart);
+
+        // Si hay else, saltar al final después del bloque if
+        if (endElseLabel != null) {
+            emit("jmp " + endElseLabel);
+        }
+
         emit(falseLabel + ":");
     }
 
-    public void generateCondicion(Node comp, String falseLabel) {
-        String leftValue = "";
-        String rightValue = "";
-        if (comp.left.nodeType.equals("VarOP")) {
-            leftValue = varOffsets.get(comp.left.op).toString();
-            leftValue += "(%rbp)";
-        } else {
-            leftValue = "$" + comp.left.op;
-        }
-        if (comp.right.nodeType.equals("VarOP")) {
-            rightValue = varOffsets.get(comp.right.op).toString();
-            rightValue += "(%rbp)";
-        } else {
-            rightValue = "$" + comp.right.op;
-        }
-        if (comp.left.nodeType.equals("VarOP")) {
-            emit("cmp " + rightValue + ", " + leftValue);
-        } else {
-            emit("cmp " + leftValue + ", " + rightValue);
-        }
-        switch (comp.op) {
-            case ">":
-                emit("jle " + falseLabel);
-                break;
+    /**
+     * Genera código para un WHILE statement
+     */
+    private void generateWhile(Node nodo, TablaSimbolos tabla) {
+        String labelStart = newLabel();
+        String falseLabel = newLabel();
 
-            case "==":
-                emit("jne " + falseLabel);
-                break;
+        emit(labelStart + ":");
 
-            case "<":
-                emit("jge " + falseLabel);
-                break;
+        // Evaluar condición (salta a falseLabel si es FALSE)
+        generateCondicionLogica(nodo.left, falseLabel);
 
-            case ">=":
-                emit("jl " + falseLabel);
-                break;
+        // Cuerpo del while (se ejecuta si condición es TRUE)
+        generateNode(nodo.right, tabla);
 
-            case "<=":
-                emit("jg " + falseLabel);
-                break;
-
-            case "!=":
-                emit("je " + falseLabel);
-                break;
-
-            default:
-                break;
-        }
-    }
-
-    public void generateCondicionInverse(Node comp, String falseLabel) {
-        String leftValue = "";
-        String rightValue = "";
-        if (comp.left.nodeType.equals("VarOP")) {
-            leftValue = varOffsets.get(comp.left.op).toString();
-            leftValue += "(%rbp)";
-        } else {
-            leftValue = "$" + comp.left.op;
-        }
-        if (comp.right.nodeType.equals("VarOP")) {
-            rightValue = varOffsets.get(comp.right.op).toString();
-            rightValue += "(%rbp)";
-        } else {
-            rightValue = "$" + comp.right.op;
-        }
-        if (comp.left.nodeType.equals("VarOP")) {
-            emit("cmp " + rightValue + ", " + leftValue);
-        } else {
-            emit("cmp " + leftValue + ", " + rightValue);
-        }
-        switch (comp.op) {
-            case "<=":
-                emit("jle " + falseLabel);
-                break;
-
-            case "!=":
-                emit("jne " + falseLabel);
-                break;
-
-            case ">=":
-                emit("jge " + falseLabel);
-                break;
-
-            case "<":
-                emit("jl " + falseLabel);
-                break;
-
-            case ">":
-                emit("jg " + falseLabel);
-                break;
-
-            case "==":
-                emit("je " + falseLabel);
-                break;
-
-            default:
-                break;
-        }
-    }
-
-    public void generateAnd(Node nodo, String falseLabel, String trueLabel, String secondConditionLabel, boolean or) {
-        boolean isLeftCondition = true;
-        boolean isRightCondition = true;
-        if (nodo.left.nodeType.equals("AND")) {
-            generateAnd(nodo.left, falseLabel, trueLabel, null, false);
-            isLeftCondition = false;
-        }
-        if (nodo.right.nodeType.equals("AND")) {
-            generateAnd(nodo.right, falseLabel, trueLabel, null, false);
-            isRightCondition = false;
-        }
-
-        if (nodo.left.nodeType.equals("OR")) {
-            generateOr(nodo.left, falseLabel);
-            isLeftCondition = false;
-        }
-        if (nodo.right.nodeType.equals("OR")) {
-            generateOr(nodo.right, falseLabel);
-            isRightCondition = false;
-        }
-
-        if (isLeftCondition && !or) {
-            generateCondicion(nodo.left, falseLabel);
-        } else {
-            generateCondicion(nodo.left, secondConditionLabel); // en caso de ser falso evalua la segunda condicion
-        }
-        if (isRightCondition && !or) {
-            generateCondicion(nodo.right, falseLabel);
-        } else {
-            generateCondicionInverse(nodo.right, trueLabel);
-        }
-
-    }
-
-    public void generateOr(Node nodo, String falseLabel) {
-        boolean isLeftCondition = true;
-        boolean isRightCondition = true;
-        String trueLabel = newLabel();
-        String secondConditionLabel = newLabel();
-
-        if (nodo.left.nodeType.equals("AND")) {
-            generateAnd(nodo.left, falseLabel, trueLabel, secondConditionLabel, true);
-            isLeftCondition = false;
-        }
-        if (nodo.right.nodeType.equals("AND")) {
-            generateAnd(nodo.right, falseLabel, trueLabel, secondConditionLabel, true);
-            isRightCondition = false;
-        }
-
-        if (nodo.left.nodeType.equals("OR")) {
-            generateOr(nodo.left, falseLabel);
-            isLeftCondition = false;
-        }
-        if (nodo.right.nodeType.equals("OR")) {
-            generateOr(nodo.right, falseLabel);
-            isRightCondition = false;
-        }
-        emit(secondConditionLabel + " : ");
-        if (isLeftCondition) {
-            generateCondicionInverse(nodo.left, trueLabel);
-        }
-
-        if (isRightCondition) {
-            generateCondicion(nodo.right, falseLabel);
-        }
-        emit(trueLabel + " :");
+        // Volver al inicio del while
+        emit("jmp " + labelStart);
+        emit(falseLabel + ":");
     }
 }
