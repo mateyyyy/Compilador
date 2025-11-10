@@ -107,7 +107,7 @@ dec_int_id = [A-Za-z_][A-Za-z_0-9]*
     "}"                { System.out.print(" } "); return symbol(sym.RKEY); }
     "int"              { System.out.print(" int "); return symbol(sym.INT); }
     ","                { System.out.print(" , "); return symbol(sym.COMA); }
-/*  "return"           { System.out.print(" return "); return symbol(sym.RETURN); } */
+    "return"           { System.out.print(" return "); return symbol(sym.RETURN); } 
     "="                { System.out.print(" = "); return symbol(sym.EQUAL); }
     "!="                { System.out.print(" != "); return symbol(sym.NOTEQUAL); }
     "=="                { System.out.print(" == "); return symbol(sym.DOUBLEEQUAL); }
