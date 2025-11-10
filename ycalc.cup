@@ -167,15 +167,18 @@
           | BOOLEAN {: RESULT = "boolean"; :}
           ;
 
-  statement ::= if_statement:is
-              {: RESULT = is; :}
-              |
-              while_statement:ws
-              {: RESULT = ws; :}
-              |
-              return_statement:rs
-              {: RESULT = rs; :}
-              ;
+ statement ::= if_statement:is
+             {: RESULT = is; :}
+             |
+             while_statement:ws
+             {: RESULT = ws; :}
+             |
+             return_statement:rs
+             {: RESULT = rs; :}
+             |
+             func_call:fc SEMI
+             {: RESULT = fc; :}
+             ;
 
   return_statement ::= RETURN valor:vl SEMI
                       {: RESULT = new Node("return", vl, null, "return"); :}
