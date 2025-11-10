@@ -2,30 +2,89 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 public class AssemblerGenerator {
     private StringBuilder code = new StringBuilder();
     private static int tempCount = 0;
     private int stackOffset = 0;
     private Map<String, Integer> varOffsets = new HashMap<>();
-
     private int finIfLabel = 0;
+
+    // Para manejar funciones
+    private Map<String, FunctionInfo> functions = new HashMap<>();
+    private String currentFunction = null;
+    private boolean inMainFunction = true;
+
+    // Clase auxiliar para guardar información de funciones
+    private static class FunctionInfo {
+        String name;
+        String returnType;
+        List<String> params;
+        int localVarCount;
+
+        public FunctionInfo(String name, String returnType) {
+            this.name = name;
+            this.returnType = returnType;
+            this.params = new ArrayList<>();
+            this.localVarCount = 0;
+        }
+    }
 
     public AssemblerGenerator() {
     }
 
     public String generateAssembler(Node nodo, TablaSimbolos tabla) {
-        code.append(".globl main\n");
-        code.append("main:\n");
-        code.append("    pushq   %rbp\n");
-        code.append("    movq    %rsp, %rbp\n");
+        // Primera pasada: registrar todas las funciones
+        registerFunctions(nodo, tabla);
 
-        stackOffset = 0;
-        generateNode(nodo, tabla);
+        // Segunda pasada: generar código
+        if (nodo.nodeType.equals("program")) {
+            // Si hay funciones definidas, generarlas primero
+            if (nodo.left != null) {
+                generateFunctions(nodo.left, tabla);
+            }
 
-        code.append("    movq    $0, %rax\n");
-        code.append("    leave\n");
-        code.append("    ret\n");
+            // Generar main
+            code.append(".globl main\n");
+            code.append("main:\n");
+            code.append("    pushq   %rbp\n");
+            code.append("    movq    %rsp, %rbp\n");
+
+            stackOffset = 0;
+            varOffsets.clear();
+            inMainFunction = true;
+            currentFunction = "main";
+
+            // Generar código del main
+            if (nodo.right != null) {
+                generateNode(nodo.right, tabla);
+            }
+
+            code.append("    movq    $0, %rax\n");
+            code.append("    leave\n");
+            code.append("    ret\n");
+        } else if (nodo.nodeType.equals("root")) {
+            // Solo hay main, sin funciones
+            code.append(".globl main\n");
+            code.append("main:\n");
+            code.append("    pushq   %rbp\n");
+            code.append("    movq    %rsp, %rbp\n");
+
+            stackOffset = 0;
+            varOffsets.clear();
+            inMainFunction = true;
+            currentFunction = "main";
+
+            if (nodo.right != null) {
+                generateNode(nodo.right, tabla);
+            }
+
+            code.append("    movq    $0, %rax\n");
+            code.append("    leave\n");
+            code.append("    ret\n");
+        }
 
         return code.toString();
     }
@@ -37,6 +96,72 @@ public class AssemblerGenerator {
         } catch (IOException e) {
             System.err.println("Error al guardar el archivo: " + e.getMessage());
         }
+    }
+
+    /**
+     * Primera pasada: registrar todas las funciones del programa
+     */
+    private void registerFunctions(Node nodo, TablaSimbolos tabla) {
+        if (nodo == null) return;
+
+        if (nodo.nodeType.equals("func_decl")) {
+            String funcName = nodo.op;
+            String returnType = nodo.left.op;
+            FunctionInfo info = new FunctionInfo(funcName, returnType);
+            functions.put(funcName, info);
+        } else if (nodo.nodeType.equals("functions")) {
+            registerFunctions(nodo.left, tabla);
+            registerFunctions(nodo.right, tabla);
+        }
+    }
+
+    /**
+     * Generar código para todas las funciones definidas
+     */
+    private void generateFunctions(Node nodo, TablaSimbolos tabla) {
+        if (nodo == null) return;
+
+        if (nodo.nodeType.equals("func_decl")) {
+            generateFunctionDecl(nodo, tabla);
+        } else if (nodo.nodeType.equals("functions")) {
+            generateFunctions(nodo.left, tabla);
+            generateFunctions(nodo.right, tabla);
+        }
+    }
+
+    /**
+     * Generar código para una declaración de función
+     */
+    private void generateFunctionDecl(Node nodo, TablaSimbolos tabla) {
+        String funcName = nodo.op;
+        currentFunction = funcName;
+        inMainFunction = false;
+
+        // Resetear offsets para esta función
+        stackOffset = 0;
+        varOffsets.clear();
+
+        // Prólogo de la función
+        code.append("\n").append(funcName).append(":\n");
+        code.append("    pushq   %rbp\n");
+        code.append("    movq    %rsp, %rbp\n");
+
+        // Los parámetros están en registros según convención x86-64
+        // Primer parámetro: %rdi, Segundo: %rsi, Tercero: %rdx,
+        // Cuarto: %rcx, Quinto: %r8, Sexto: %r9
+
+        // Generar código del cuerpo de la función
+        if (nodo.right != null) {
+            generateNode(nodo.right, tabla);
+        }
+
+        // Epílogo de la función (si no hay return explícito)
+        String returnType = nodo.left.op;
+        if (!returnType.equals("void")) {
+            code.append("    movq    $0, %rax\n");
+        }
+        code.append("    leave\n");
+        code.append("    ret\n");
     }
 
     private String generateNode(Node nodo, TablaSimbolos tabla) {
@@ -73,7 +198,7 @@ public class AssemblerGenerator {
                 return varOffsets.containsKey(nodo.op) ? varOffsets.get(nodo.op) + "(%rbp)" : nodo.op;
 
             case "Leaf":
-                if (nodo.type.equals("int"))
+                if (nodo.type != null && nodo.type.equals("int"))
                     return "$" + nodo.op;
                 else
                     return nodo.op;
@@ -106,6 +231,13 @@ public class AssemblerGenerator {
                 generateWhile(nodo, tabla);
                 break;
 
+            case "func_call":
+                return generateFunctionCall(nodo, tabla);
+
+            case "return":
+                generateReturn(nodo, tabla);
+                break;
+
             default:
                 if (nodo.left != null)
                     generateNode(nodo.left, tabla);
@@ -115,6 +247,89 @@ public class AssemblerGenerator {
         }
 
         return "";
+    }
+
+    /**
+     * Generar código para una llamada a función
+     */
+    private String generateFunctionCall(Node nodo, TablaSimbolos tabla) {
+        String funcName = nodo.op;
+
+        // Recolectar argumentos en orden
+        List<String> args = new ArrayList<>();
+        if (nodo.left != null) {
+            collectArguments(nodo.left, args, tabla);
+        }
+
+        // En x86-64, los primeros 6 argumentos van en registros:
+        // %rdi, %rsi, %rdx, %rcx, %r8, %r9
+        String[] argRegisters = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
+
+        // Guardar registros que podrían ser modificados
+        // (en una implementación más completa)
+
+        // Cargar argumentos en registros o push al stack
+        for (int i = 0; i < args.size(); i++) {
+            if (i < 6) {
+                emit("movq " + args.get(i) + ", " + argRegisters[i]);
+            } else {
+                // Más de 6 argumentos: push al stack (orden inverso)
+                emit("pushq " + args.get(i));
+            }
+        }
+
+        // Alinear stack a 16 bytes antes de call (convención x86-64)
+        // Para simplificar, asumimos que está alineado
+        emit("call " + funcName);
+
+        // Limpiar stack si había más de 6 argumentos
+        if (args.size() > 6) {
+            int bytesToClean = (args.size() - 6) * 8;
+            emit("addq $" + bytesToClean + ", %rsp");
+        }
+
+        // El valor de retorno está en %rax
+        // Guardarlo en una temporal para usarlo después
+        String temp = newTemp();
+        stackOffset -= 8;
+        varOffsets.put(temp, stackOffset);
+        emit("movq %rax, " + stackOffset + "(%rbp)");
+
+        return stackOffset + "(%rbp)";
+    }
+
+    /**
+     * Recolectar argumentos de una llamada a función en orden
+     */
+    private void collectArguments(Node nodo, List<String> args, TablaSimbolos tabla) {
+        if (nodo == null) return;
+
+        if (nodo.nodeType.equals("args")) {
+            // Procesar lista de argumentos recursivamente (izquierda primero)
+            collectArguments(nodo.left, args, tabla);
+            // Luego agregar el argumento derecho
+            String argValue = generateNode(nodo.right, tabla);
+            args.add(argValue);
+        } else {
+            // Es un solo argumento
+            String argValue = generateNode(nodo, tabla);
+            args.add(argValue);
+        }
+    }
+
+    /**
+     * Generar código para un return statement
+     */
+    private void generateReturn(Node nodo, TablaSimbolos tabla) {
+        if (nodo.left != null) {
+            // Return con valor
+            String returnValue = generateNode(nodo.left, tabla);
+            emit("movq " + returnValue + ", %rax");
+        }
+        // Si es void o return sin valor, %rax ya tiene un valor por defecto
+
+        emit("leave");
+        emit("ret");
     }
 
     private String generateSum(Node nodo, TablaSimbolos tabla) {
@@ -184,10 +399,8 @@ public class AssemblerGenerator {
         return label;
     }
 
-    // ============= FUNCIONES PARA MANEJO DE CONDICIONES =============
-
     /**
-     * Genera código para una condición lógica completa (puede incluir AND, OR, o condiciones simples)
+     * Genera código para una condición lógica completa
      * Salta a falseLabel si la condición completa es FALSE
      */
     private void generateCondicionLogica(Node nodo, String falseLabel) {
@@ -220,7 +433,6 @@ public class AssemblerGenerator {
     /**
      * Genera código para una condición invertida
      * Salta a trueLabel si la condición es TRUE
-     * Se usa para OR (evaluación con cortocircuito)
      */
     private void generateCondicionInvertida(Node nodo, String trueLabel) {
         if (nodo.nodeType.equals("condition")) {
@@ -281,17 +493,20 @@ public class AssemblerGenerator {
 
     /**
      * Helper para obtener la representación en string de un valor
-     * (variable o constante)
      */
     private String getValueString(Node node) {
         if (node.nodeType.equals("VarOP")) {
-            return varOffsets.get(node.op) + "(%rbp)";
+            Integer offset = varOffsets.get(node.op);
+            if (offset != null) {
+                return offset + "(%rbp)";
+            }
+            return "$0"; // Fallback
+        } else if (node.nodeType.equals("Leaf")) {
+            return "$" + node.op;
         } else {
             return "$" + node.op;
         }
     }
-
-    // ============= GENERACIÓN DE IF Y WHILE =============
 
     /**
      * Genera código para un IF statement

@@ -1,4 +1,4 @@
-  /*
+/*
     File Name: ycalc.cup
     To Create: > java java_cup.Main < ycalc.cup
   */
@@ -14,46 +14,23 @@
       Node RaizNode;
       public void report_error(String message, Object info) {
     
-          /* Create a StringBuffer called 'm' with the string 'Error' in it. */
           StringBuffer m = new StringBuffer("Error");
     
-          /* Check if the information passed to the method is the same
-            type as the type java_cup.runtime.Symbol. */
           if (info instanceof java_cup.runtime.Symbol) {
-              /* Declare a java_cup.runtime.Symbol object 's' with the
-                information in the object info that is being typecasted
-                as a java_cup.runtime.Symbol object. */
               java_cup.runtime.Symbol s = ((java_cup.runtime.Symbol) info);
     
-              /* Check if the line number in the input is greater or
-                equal to zero. */
               if (s.left >= 0) {                
-                  /* Add to the end of the StringBuffer error message
-                    the line number of the error in the input. */
                   m.append(" in line "+(s.left+1));   
-                  /* Check if the column number in the input is greater
-                    or equal to zero. */
                   if (s.right >= 0)                    
-                      /* Add to the end of the StringBuffer error message
-                        the column number of the error in the input. */
                       m.append(", column "+(s.right+1));
               }
           }
     
-          /* Add to the end of the StringBuffer error message created in
-            this method the message that was passed into this method. */
           m.append(" : "+message);
     
-          /* Print the contents of the StringBuffer 'm', which contains
-            an error message, out on a line. */
           System.err.println(m);
       }
     
-      /* Change the method report_fatal_error so when it reports a fatal
-        error it will display the line and column number of where the
-        fatal error occurred in the input as well as the reason for the
-        fatal error which is passed into the method in the object
-        'message' and then exit.*/
       public void report_fatal_error(String message, Object info) {
           report_error(message, info);
           System.exit(1);
@@ -65,9 +42,10 @@
   /* ------------Declaration of Terminals and Non Terminals Section----------- */
     
 
-  terminal           SEMI, PLUS, MINUS, TIMES, DIVIDE, LPAREN, RPAREN;
+  terminal           SEMI, PLUS, MINUS, TIMES, DIVIDE, LPAREN, RPAREN, AND, OR;
   terminal           RKEY, LKEY, VOID, MAIN, COMA, EQUAL, DOUBLEEQUAL, NOTEQUAL;
-  terminal           INT,  FLOAT, BOOLEAN, STRING, IF, ELSE, GREATER, LESS;
+  terminal           INT,  FLOAT, BOOLEAN, STRING, IF, ELSE, WHILE, GREATER, LESS;
+  terminal           LESSEQUAL, GREATEREQUAL, RETURN;
 
   terminal Integer NUMBER;
   terminal String ID;
@@ -75,8 +53,9 @@
   terminal Boolean BOOLEAN_LIT;
 
   non terminal String tipo, comparison_expr;
-  non terminal Node expr, expr_part, valor, asignacion, statement, if_statement, condicion;
+  non terminal Node expr, expr_part, valor, asignacion, statement, if_statement, while_statement, condicion;
   non terminal Node func_section, main_block, func_list, program, expr_dcl_list, declaracion;
+  non terminal Node func_decl, return_statement, func_call, param_list, arg_list;
   non terminal func, void_decl, main;
   non terminal params;
 
@@ -85,23 +64,27 @@
 
   /* -------------Precedence and Associatively of Terminals Section----------- */
     
-  /*
-    Precedence of non terminals could be defined here.  If you do define
-    precedence here you won't need to worry about precedence in the
-    Grammar Section, i.e. that TIMES should have a higher precedence
-    than PLUS.
-    
-    The precedence defined here would look something like this where the
-    lower line always will have higher precedence than the line before it.
-  */   
-    precedence left PLUS, MINUS; 
-    precedence left TIMES, DIVIDE; 
-
+  precedence left OR;
+  precedence left AND;
+  precedence left PLUS, MINUS;
+  precedence left TIMES, DIVIDE;
 
 
   /* ----------------------------Grammar Section-------------------- */
     
-    main ::= main_block:mb
+    main ::= func_section:fs main_block:mb
+            {: Node program = new Node(null, fs, mb, "program");
+              System.out.println("Arbol");
+              program.recorrer(tabla);
+              program.getType(tabla);
+              program.recorridoInterprete(tabla);
+              ag = new AssemblerGenerator();
+              String assemblerCode = ag.generateAssembler(program, tabla);
+              System.out.println("\n--- Código Assembler ---\n" + assemblerCode);
+              ag.saveToFile("salida.txt");
+              RaizNode = program;
+            :}
+          | main_block:mb
             {: RaizNode = new Node(null, null, mb, "root");
               System.out.println("Arbol");
               RaizNode.recorrer(tabla);
@@ -114,6 +97,24 @@
             :}
           ;
 
+  func_section ::= func_section:fs func_decl:fd
+                   {: RESULT = new Node(null, fs, fd, "functions"); :}
+                 | func_decl:fd
+                   {: RESULT = fd; :}
+                 ;
+
+  func_decl ::= tipo:tp ID:id LPAREN params RPAREN LKEY program:pg RKEY
+                {: 
+                  tabla.Agregar(id, tp, "function");
+                  RESULT = new Node(id, new Node(tp, "Leaf"), pg, "func_decl");
+                :}
+              | VOID ID:id LPAREN params RPAREN LKEY program:pg RKEY
+                {: 
+                  tabla.Agregar(id, "void", "function");
+                  RESULT = new Node(id, new Node("void", "Leaf"), pg, "func_decl");
+                :}
+              ;
+
   main_block ::= VOID MAIN LPAREN params RPAREN LKEY program:pg RKEY
                   {: RESULT = pg; :}
                 ;
@@ -123,8 +124,8 @@
             | /* empty */
             ;
 
-  params ::= INT ID:id COMA params
-            | INT ID:id
+  params ::= tipo:tp ID:id COMA params
+            | tipo:tp ID:id
             | /* empty */
             ;
 
@@ -142,7 +143,21 @@
           {: RESULT = ex; :} 
           | BOOLEAN_LIT:bl 
           {: RESULT = new Node(bl.toString(), "Leaf", "boolean"); :} 
+          | func_call:fc
+          {: RESULT = fc; :}
           ;
+
+  func_call ::= ID:id LPAREN arg_list:al RPAREN
+                {: RESULT = new Node(id, al, null, "func_call"); :}
+              | ID:id LPAREN RPAREN
+                {: RESULT = new Node(id, null, null, "func_call"); :}
+              ;
+
+  arg_list ::= arg_list:al COMA expr:ex
+               {: RESULT = new Node(null, al, ex, "args"); :}
+             | expr:ex
+               {: RESULT = ex; :}
+             ;
 
   tipo ::= INT {: RESULT = "int"; :}
           | FLOAT {: RESULT = "float"; :} 
@@ -151,7 +166,20 @@
           ;
 
   statement ::= if_statement:is
-              {: RESULT = is; :};
+              {: RESULT = is; :}
+              |
+              while_statement:ws
+              {: RESULT = ws; :}
+              |
+              return_statement:rs
+              {: RESULT = rs; :}
+              ;
+
+  return_statement ::= RETURN valor:vl SEMI
+                      {: RESULT = new Node("return", vl, null, "return"); :}
+                    | RETURN SEMI
+                      {: RESULT = new Node("return", null, null, "return"); :}
+                    ;
 
   if_statement ::= IF LPAREN condicion:cd RPAREN LKEY program:pg RKEY
                   {: RESULT = new Node(null, cd, pg, "if"); :}
@@ -163,9 +191,18 @@
                   RESULT = new Node(null, ifNode, elseNode, "ifelse"); :}
                   ;
 
-  condicion ::= expr:ex0 comparison_expr:ce expr:ex1
-                  {: RESULT = new Node(ce, ex0, ex1, "condition"); :}
-                ;
+  while_statement ::= WHILE LPAREN condicion:cd RPAREN LKEY program:pg RKEY
+                      {: RESULT = new Node(null, cd, pg, "while"); :};
+
+  condicion ::= condicion:c1 OR condicion:c2
+                {: RESULT = new Node("OR", c1, c2, "OR"); :}
+            |
+            condicion:c1 AND condicion:c2
+                {: RESULT = new Node("AND", c1, c2, "AND"); :}
+            |
+            expr:ex0 comparison_expr:ce expr:ex1
+                {: RESULT = new Node(ce, ex0, ex1, "condition"); :}
+            ;
 
   comparison_expr ::= GREATER
                       {: RESULT = ">"; :}
@@ -175,9 +212,9 @@
                       {: RESULT = "=="; :}
                     | NOTEQUAL
                       {: RESULT = "!="; :}
-                    | LESS EQUAL
+                    | LESSEQUAL
                       {: RESULT = "<="; :}
-                    | GREATER EQUAL
+                    | GREATEREQUAL
                     {: RESULT = ">="; :}
                     ;
 

@@ -104,16 +104,18 @@
                  ;
 
   func_decl ::= tipo:tp ID:id LPAREN params RPAREN LKEY program:pg RKEY
-                {: 
-                  tabla.Agregar(id, tp, "function");
-                  RESULT = new Node(id, new Node(tp, "Leaf"), pg, "func_decl");
-                :}
-              | VOID ID:id LPAREN params RPAREN LKEY program:pg RKEY
-                {: 
-                  tabla.Agregar(id, "void", "function");
-                  RESULT = new Node(id, new Node("void", "Leaf"), pg, "func_decl");
-                :}
-              ;
+              {:
+                tabla.Agregar(id, tp, "function");
+                // CAMBIAR ESTA LÍNEA:
+                RESULT = new Node(id, new Node(tp, "Leaf", tp), pg, "func_decl");
+              :}
+            | VOID ID:id LPAREN params RPAREN LKEY program:pg RKEY
+              {:
+                tabla.Agregar(id, "void", "function");
+                // CAMBIAR ESTA LÍNEA:
+                RESULT = new Node(id, new Node("void", "Leaf", "void"), pg, "func_decl");
+              :}
+            ;
 
   main_block ::= VOID MAIN LPAREN params RPAREN LKEY program:pg RKEY
                   {: RESULT = pg; :}

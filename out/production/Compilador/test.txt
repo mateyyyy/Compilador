@@ -1,7 +1,11 @@
+int sumar(int x, int y){
+    return x;
+}
+
 void main () {
-    int x = 5;
-    if(x != 3){
-        int y;
-        y = 5;
+    int x = 9;
+    int y = 1;
+    while(x != 10 && x > 1 || x==2){
+        x = x + 1;
     }
 }
