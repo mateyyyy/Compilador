@@ -1,9 +1,9 @@
-int sumar(int x, int y){
-    return x;
-}
+void main() {
+    boolean flag;
+    flag = true;
 
-void main () {
-    int x = 9;
-    int y = 1;
-    sumar(x,y);
+    if (flag) {
+        int x;
+        x = 1;
+    }
 }

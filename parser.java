@@ -350,7 +350,6 @@ class CUP$parser$actions {
               System.out.println("Arbol");
               program.recorrer(tabla);
               program.getType(tabla);
-              program.recorridoInterprete(tabla);
               ag = new AssemblerGenerator();
               String assemblerCode = ag.generateAssembler(program, tabla);
               System.out.println("\n--- Código Assembler ---\n" + assemblerCode);
@@ -433,13 +432,18 @@ class CUP$parser$actions {
 		int idleft = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-6)).left;
 		int idright = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-6)).right;
 		String id = (String)((java_cup.runtime.Symbol) CUP$parser$stack.elementAt(CUP$parser$top-6)).value;
+		int pleft = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-4)).left;
+		int pright = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-4)).right;
+		Node p = (Node)((java_cup.runtime.Symbol) CUP$parser$stack.elementAt(CUP$parser$top-4)).value;
 		int pgleft = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-1)).left;
 		int pgright = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-1)).right;
 		Node pg = (Node)((java_cup.runtime.Symbol) CUP$parser$stack.elementAt(CUP$parser$top-1)).value;
 		
                 tabla.Agregar(id, tp, "function");
-                // CAMBIAR ESTA LÍNEA:
-                RESULT = new Node(id, new Node(tp, "Leaf", tp), pg, "func_decl");
+                // Creamos un nodo para el tipo y le colgamos los parámetros a la derecha
+                Node typeNode = new Node(tp, "Leaf", tp);
+                typeNode.right = p; // <--- AQUÍ GUARDAMOS LOS PARÁMETROS
+                RESULT = new Node(id, typeNode, pg, "func_decl");
               
               CUP$parser$result = parser.getSymbolFactory().newSymbol("func_decl",16, ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-7)), ((java_cup.runtime.Symbol)CUP$parser$stack.peek()), RESULT);
             }
@@ -452,13 +456,17 @@ class CUP$parser$actions {
 		int idleft = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-6)).left;
 		int idright = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-6)).right;
 		String id = (String)((java_cup.runtime.Symbol) CUP$parser$stack.elementAt(CUP$parser$top-6)).value;
+		int pleft = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-4)).left;
+		int pright = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-4)).right;
+		Node p = (Node)((java_cup.runtime.Symbol) CUP$parser$stack.elementAt(CUP$parser$top-4)).value;
 		int pgleft = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-1)).left;
 		int pgright = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-1)).right;
 		Node pg = (Node)((java_cup.runtime.Symbol) CUP$parser$stack.elementAt(CUP$parser$top-1)).value;
 		
                 tabla.Agregar(id, "void", "function");
-                // CAMBIAR ESTA LÍNEA:
-                RESULT = new Node(id, new Node("void", "Leaf", "void"), pg, "func_decl");
+                Node typeNode = new Node("void", "Leaf", "void");
+                typeNode.right = p; // <--- AQUÍ TAMBIÉN
+                RESULT = new Node(id, typeNode, pg, "func_decl");
               
               CUP$parser$result = parser.getSymbolFactory().newSymbol("func_decl",16, ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-7)), ((java_cup.runtime.Symbol)CUP$parser$stack.peek()), RESULT);
             }
@@ -468,10 +476,18 @@ class CUP$parser$actions {
           case 7: // main_block ::= VOID MAIN LPAREN params RPAREN LKEY program RKEY 
             {
               Node RESULT =null;
+		int pleft = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-4)).left;
+		int pright = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-4)).right;
+		Node p = (Node)((java_cup.runtime.Symbol) CUP$parser$stack.elementAt(CUP$parser$top-4)).value;
 		int pgleft = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-1)).left;
 		int pgright = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-1)).right;
 		Node pg = (Node)((java_cup.runtime.Symbol) CUP$parser$stack.elementAt(CUP$parser$top-1)).value;
-		 RESULT = pg; 
+		 
+                      // Convertimos el main en un nodo func_decl estándar
+                      Node typeNode = new Node("void", "Leaf", "void");
+                      typeNode.right = p; 
+                      RESULT = new Node("main", typeNode, pg, "func_decl");
+                    
               CUP$parser$result = parser.getSymbolFactory().newSymbol("main_block",11, ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-7)), ((java_cup.runtime.Symbol)CUP$parser$stack.peek()), RESULT);
             }
           return CUP$parser$result;
@@ -500,14 +516,22 @@ class CUP$parser$actions {
           /*. . . . . . . . . . . . . . . . . . . .*/
           case 10: // params ::= tipo ID COMA params 
             {
-              Object RESULT =null;
+              Node RESULT =null;
 		int tpleft = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-3)).left;
 		int tpright = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-3)).right;
 		String tp = (String)((java_cup.runtime.Symbol) CUP$parser$stack.elementAt(CUP$parser$top-3)).value;
 		int idleft = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-2)).left;
 		int idright = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-2)).right;
 		String id = (String)((java_cup.runtime.Symbol) CUP$parser$stack.elementAt(CUP$parser$top-2)).value;
-
+		int psleft = ((java_cup.runtime.Symbol)CUP$parser$stack.peek()).left;
+		int psright = ((java_cup.runtime.Symbol)CUP$parser$stack.peek()).right;
+		Node ps = (Node)((java_cup.runtime.Symbol) CUP$parser$stack.peek()).value;
+		 
+               tabla.Agregar(id, tp); 
+               RESULT = new Node(id, "Leaf", tp); 
+               // Podés enlazarlo con ps si querés armar un árbol de parámetros
+               RESULT = new Node(null, RESULT, ps, "params");
+            
               CUP$parser$result = parser.getSymbolFactory().newSymbol("params",24, ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-3)), ((java_cup.runtime.Symbol)CUP$parser$stack.peek()), RESULT);
             }
           return CUP$parser$result;
@@ -515,14 +539,17 @@ class CUP$parser$actions {
           /*. . . . . . . . . . . . . . . . . . . .*/
           case 11: // params ::= tipo ID 
             {
-              Object RESULT =null;
+              Node RESULT =null;
 		int tpleft = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-1)).left;
 		int tpright = ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-1)).right;
 		String tp = (String)((java_cup.runtime.Symbol) CUP$parser$stack.elementAt(CUP$parser$top-1)).value;
 		int idleft = ((java_cup.runtime.Symbol)CUP$parser$stack.peek()).left;
 		int idright = ((java_cup.runtime.Symbol)CUP$parser$stack.peek()).right;
 		String id = (String)((java_cup.runtime.Symbol) CUP$parser$stack.peek()).value;
-
+		 
+               tabla.Agregar(id, tp); 
+               RESULT = new Node(id, "Leaf", tp); 
+            
               CUP$parser$result = parser.getSymbolFactory().newSymbol("params",24, ((java_cup.runtime.Symbol)CUP$parser$stack.elementAt(CUP$parser$top-1)), ((java_cup.runtime.Symbol)CUP$parser$stack.peek()), RESULT);
             }
           return CUP$parser$result;
@@ -530,8 +557,8 @@ class CUP$parser$actions {
           /*. . . . . . . . . . . . . . . . . . . .*/
           case 12: // params ::= 
             {
-              Object RESULT =null;
-
+              Node RESULT =null;
+		 RESULT = null; 
               CUP$parser$result = parser.getSymbolFactory().newSymbol("params",24, ((java_cup.runtime.Symbol)CUP$parser$stack.peek()), RESULT);
             }
           return CUP$parser$result;

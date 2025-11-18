@@ -2,6 +2,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -102,7 +103,8 @@ public class AssemblerGenerator {
      * Primera pasada: registrar todas las funciones del programa
      */
     private void registerFunctions(Node nodo, TablaSimbolos tabla) {
-        if (nodo == null) return;
+        if (nodo == null)
+            return;
 
         if (nodo.nodeType.equals("func_decl")) {
             String funcName = nodo.op;
@@ -119,7 +121,8 @@ public class AssemblerGenerator {
      * Generar código para todas las funciones definidas
      */
     private void generateFunctions(Node nodo, TablaSimbolos tabla) {
-        if (nodo == null) return;
+        if (nodo == null)
+            return;
 
         if (nodo.nodeType.equals("func_decl")) {
             generateFunctionDecl(nodo, tabla);
@@ -146,20 +149,69 @@ public class AssemblerGenerator {
         code.append("    pushq   %rbp\n");
         code.append("    movq    %rsp, %rbp\n");
 
-        // Los parámetros están en registros según convención x86-64
-        // Primer parámetro: %rdi, Segundo: %rsi, Tercero: %rdx,
-        // Cuarto: %rcx, Quinto: %r8, Sexto: %r9
+        // --- INICIO DEL CAMBIO: Procesar Parámetros ---
+
+        // Los parámetros ahora están accesibles en nodo.left.right
+        // (donde nodo.left es el nodo de tipo retorno y su hijo derecho es la lista de
+        // params)
+        if (nodo.left != null && nodo.left.right != null) {
+            Node paramsNode = nodo.left.right;
+
+            String[] argRegisters = { "%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9" };
+            int paramIndex = 0;
+
+            // Iterar sobre la lista enlazada de parámetros del CUP
+            Node currentParam = paramsNode;
+            while (currentParam != null && paramIndex < argRegisters.length) {
+                // La estructura exacta depende de tu CUP.
+                // Si "params" devuelve una lista enlazada de nodos "params" o "Leaf":
+
+                String paramName = null;
+
+                // Caso 1: Nodo intermedio de lista (tiene hijo izquierdo)
+                if (currentParam.left != null) {
+                    paramName = currentParam.left.op;
+                }
+                // Caso 2: Nodo hoja o final de lista (el nombre está en op)
+                else if (currentParam.op != null) {
+                    paramName = currentParam.op;
+                }
+
+                if (paramName != null && !paramName.equals("empty_params")) {
+                    // 1. Asignar espacio en el stack
+                    stackOffset -= 8;
+
+                    // 2. Guardar en el mapa para que generateNode sepa dónde está
+                    varOffsets.put(paramName, stackOffset);
+
+                    // 3. Generar instrucción para mover del registro al stack
+                    emit("movq " + argRegisters[paramIndex] + ", " + stackOffset + "(%rbp)");
+
+                    paramIndex++;
+                }
+
+                // Avanzar en la lista
+                currentParam = currentParam.right;
+            }
+        }
+        // --- FIN DEL CAMBIO ---
 
         // Generar código del cuerpo de la función
         if (nodo.right != null) {
             generateNode(nodo.right, tabla);
         }
 
-        // Epílogo de la función (si no hay return explícito)
+        // Epílogo de la función
         String returnType = nodo.left.op;
-        if (!returnType.equals("void")) {
-            code.append("    movq    $0, %rax\n");
+        // Si es main, asegurar retorno 0
+        if (funcName.equals("main")) {
+            emit("movq $0, %rax");
+        } else if (!returnType.equals("void")) {
+            // Si no es void, asumimos que el código del cuerpo ya puso algo en %rax
+            // o generamos un default 0 por seguridad si falta el return
+            // emit("movq $0, %rax"); // Opcional
         }
+
         code.append("    leave\n");
         code.append("    ret\n");
     }
@@ -170,20 +222,30 @@ public class AssemblerGenerator {
 
         switch (nodo.nodeType) {
             case "Declaration":
+                // 1. Reservamos espacio para la nueva variable
                 stackOffset -= 8;
                 varOffsets.put(nodo.left.op, stackOffset);
+
+                // IMPORTANTE: Guardamos este offset en una variable local
+                // porque 'stackOffset' puede cambiar al generar el nodo derecho.
+                int offsetDestino = stackOffset;
+
                 if (nodo.right != null) {
                     String rval = generateNode(nodo.right, tabla);
                     emit("movq " + rval + ", %rax");
-                    emit("movq %rax, " + stackOffset + "(%rbp)");
+                    // Usamos la variable local offsetDestino, NO stackOffset global
+                    emit("movq %rax, " + offsetDestino + "(%rbp)");
                 } else {
                     emit("movq $0, %rax");
-                    emit("movq %rax, " + stackOffset + "(%rbp)");
+                    emit("movq %rax, " + offsetDestino + "(%rbp)");
                 }
-                return stackOffset + "(%rbp)";
+                return offsetDestino + "(%rbp)";
 
             case "Asignacion":
+                // Nota: En asignación generas primero el valor (derecha)
                 String rval = generateNode(nodo.right, tabla);
+
+                // Luego buscas dónde guardarlo. Esto está bien porque usas el mapa.
                 Integer offset = varOffsets.get(nodo.left.op);
                 if (offset == null) {
                     stackOffset -= 8;
@@ -263,7 +325,7 @@ public class AssemblerGenerator {
 
         // En x86-64, los primeros 6 argumentos van en registros:
         // %rdi, %rsi, %rdx, %rcx, %r8, %r9
-        String[] argRegisters = {"%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9"};
+        String[] argRegisters = { "%rdi", "%rsi", "%rdx", "%rcx", "%r8", "%r9" };
 
         // Guardar registros que podrían ser modificados
         // (en una implementación más completa)
@@ -302,7 +364,8 @@ public class AssemblerGenerator {
      * Recolectar argumentos de una llamada a función en orden
      */
     private void collectArguments(Node nodo, List<String> args, TablaSimbolos tabla) {
-        if (nodo == null) return;
+        if (nodo == null)
+            return;
 
         if (nodo.nodeType.equals("args")) {
             // Procesar lista de argumentos recursivamente (izquierda primero)
@@ -444,12 +507,24 @@ public class AssemblerGenerator {
 
             // Saltos INVERTIDOS (si condición es TRUE, saltar)
             switch (nodo.op) {
-                case ">":  emit("jg " + trueLabel); break;
-                case "<":  emit("jl " + trueLabel); break;
-                case ">=": emit("jge " + trueLabel); break;
-                case "<=": emit("jle " + trueLabel); break;
-                case "==": emit("je " + trueLabel); break;
-                case "!=": emit("jne " + trueLabel); break;
+                case ">":
+                    emit("jg " + trueLabel);
+                    break;
+                case "<":
+                    emit("jl " + trueLabel);
+                    break;
+                case ">=":
+                    emit("jge " + trueLabel);
+                    break;
+                case "<=":
+                    emit("jle " + trueLabel);
+                    break;
+                case "==":
+                    emit("je " + trueLabel);
+                    break;
+                case "!=":
+                    emit("jne " + trueLabel);
+                    break;
             }
         } else if (nodo.nodeType.equals("AND")) {
             // AND invertido: necesitamos que AMBAS sean TRUE para saltar
@@ -482,12 +557,24 @@ public class AssemblerGenerator {
 
         // Saltos normales (si condición es FALSE, saltar)
         switch (nodo.op) {
-            case ">":  emit("jle " + falseLabel); break;
-            case "<":  emit("jge " + falseLabel); break;
-            case ">=": emit("jl " + falseLabel); break;
-            case "<=": emit("jg " + falseLabel); break;
-            case "==": emit("jne " + falseLabel); break;
-            case "!=": emit("je " + falseLabel); break;
+            case ">":
+                emit("jle " + falseLabel);
+                break;
+            case "<":
+                emit("jge " + falseLabel);
+                break;
+            case ">=":
+                emit("jl " + falseLabel);
+                break;
+            case "<=":
+                emit("jg " + falseLabel);
+                break;
+            case "==":
+                emit("jne " + falseLabel);
+                break;
+            case "!=":
+                emit("je " + falseLabel);
+                break;
         }
     }
 

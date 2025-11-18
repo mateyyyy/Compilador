@@ -57,7 +57,7 @@
   non terminal Node func_section, main_block, func_list, program, expr_dcl_list, declaracion;
   non terminal Node func_decl, return_statement, func_call, param_list, arg_list;
   non terminal func, void_decl, main;
-  non terminal params;
+  non terminal Node params;
 
 
     
@@ -77,7 +77,6 @@
               System.out.println("Arbol");
               program.recorrer(tabla);
               program.getType(tabla);
-              program.recorridoInterprete(tabla);
               ag = new AssemblerGenerator();
               String assemblerCode = ag.generateAssembler(program, tabla);
               System.out.println("\n--- Código Assembler ---\n" + assemblerCode);
@@ -103,33 +102,53 @@
                    {: RESULT = fd; :}
                  ;
 
-  func_decl ::= tipo:tp ID:id LPAREN params RPAREN LKEY program:pg RKEY
+  func_decl ::= tipo:tp ID:id LPAREN params:p RPAREN LKEY program:pg RKEY
               {:
                 tabla.Agregar(id, tp, "function");
-                // CAMBIAR ESTA LÍNEA:
-                RESULT = new Node(id, new Node(tp, "Leaf", tp), pg, "func_decl");
+                // Creamos un nodo para el tipo y le colgamos los parámetros a la derecha
+                Node typeNode = new Node(tp, "Leaf", tp);
+                typeNode.right = p; // <--- AQUÍ GUARDAMOS LOS PARÁMETROS
+                RESULT = new Node(id, typeNode, pg, "func_decl");
               :}
-            | VOID ID:id LPAREN params RPAREN LKEY program:pg RKEY
+            |
+            VOID ID:id LPAREN params:p RPAREN LKEY program:pg RKEY
               {:
                 tabla.Agregar(id, "void", "function");
-                // CAMBIAR ESTA LÍNEA:
-                RESULT = new Node(id, new Node("void", "Leaf", "void"), pg, "func_decl");
+                Node typeNode = new Node("void", "Leaf", "void");
+                typeNode.right = p; // <--- AQUÍ TAMBIÉN
+                RESULT = new Node(id, typeNode, pg, "func_decl");
               :}
             ;
 
-  main_block ::= VOID MAIN LPAREN params RPAREN LKEY program:pg RKEY
-                  {: RESULT = pg; :}
-                ;
+  main_block ::= VOID MAIN LPAREN params:p RPAREN LKEY program:pg RKEY
+                    {: 
+                      // Convertimos el main en un nodo func_decl estándar
+                      Node typeNode = new Node("void", "Leaf", "void");
+                      typeNode.right = p; 
+                      RESULT = new Node("main", typeNode, pg, "func_decl");
+                    :}
+                  ;
 
   program ::= expr_dcl_list:edl
               {: RESULT = edl; :}
             | /* empty */
             ;
 
-  params ::= tipo:tp ID:id COMA params
-            | tipo:tp ID:id
-            | /* empty */
-            ;
+  params ::= tipo:tp ID:id COMA params:ps
+            {: 
+               tabla.Agregar(id, tp); 
+               RESULT = new Node(id, "Leaf", tp); 
+               // Podés enlazarlo con ps si querés armar un árbol de parámetros
+               RESULT = new Node(null, RESULT, ps, "params");
+            :}
+          | tipo:tp ID:id
+            {: 
+               tabla.Agregar(id, tp); 
+               RESULT = new Node(id, "Leaf", tp); 
+            :}
+          | /* empty */
+            {: RESULT = null; :}
+          ;
 
   declaracion ::= tipo:tp ID:id SEMI
                   {: RESULT = new Node("=", new Node(id, "Leaf", tp), null, "Declaration" ); :}

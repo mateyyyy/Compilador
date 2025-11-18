@@ -1,25 +1,31 @@
 
-sumar:
+suma:
     pushq   %rbp
     movq    %rsp, %rbp
-    movq x, %rax
+    movq %rdi, -8(%rbp)
+    movq %rsi, -16(%rbp)
+    movq -8(%rbp), %rax
+    addq -16(%rbp), %rax
+    movq %rax, -32(%rbp)
+    movq -32(%rbp), %rax
+    movq %rax, -24(%rbp)
+    movq -24(%rbp), %rax
     leave
     ret
-    movq    $0, %rax
     leave
     ret
 .globl main
 main:
     pushq   %rbp
     movq    %rsp, %rbp
-    movq $9, %rax
+    movq $0, %rax
     movq %rax, -8(%rbp)
-    movq $1, %rax
+    movq $3, %rdi
+    movq $4, %rsi
+    call suma
     movq %rax, -16(%rbp)
-    movq -8(%rbp), %rdi
-    movq -16(%rbp), %rsi
-    call sumar
-    movq %rax, -24(%rbp)
+    movq -16(%rbp), %rax
+    movq %rax, -8(%rbp)
     movq    $0, %rax
     leave
     ret
